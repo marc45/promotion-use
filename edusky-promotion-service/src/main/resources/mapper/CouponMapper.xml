@@ -1,0 +1,363 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.edu.sky.promotion.po.dao.CouponMapper">
+  <resultMap id="BaseResultMap" type="com.edu.sky.promotion.po.entity.Coupon">
+    <result column="id" jdbcType="BIGINT" property="id" />
+    <result column="name" jdbcType="VARCHAR" property="name" />
+    <result column="type" jdbcType="TINYINT" property="type" />
+    <result column="face_value" jdbcType="DOUBLE" property="faceValue" />
+    <result column="inventory_flag" jdbcType="BIT" property="inventoryFlag" />
+    <result column="restrict_flag" jdbcType="BIT" property="restrictFlag" />
+    <result column="repeat_flag" jdbcType="BIT" property="repeatFlag" />
+    <result column="application_type" jdbcType="TINYINT" property="applicationType" />
+    <result column="fix_type" jdbcType="TINYINT" property="fixType" />
+    <result column="start_time" jdbcType="TIMESTAMP" property="startTime" />
+    <result column="end_time" jdbcType="TIMESTAMP" property="endTime" />
+    <result column="expire_day" jdbcType="SMALLINT" property="expireDay" />
+    <result column="description" jdbcType="VARCHAR" property="description" />
+    <result column="common_state" jdbcType="TINYINT" property="commonState" />
+    <result column="on_line_flag" jdbcType="TINYINT" property="onLineFlag" />
+    <result column="create_time" jdbcType="TIMESTAMP" property="createTime" />
+    <result column="update_time" jdbcType="TIMESTAMP" property="updateTime" />
+  </resultMap>
+  <sql id="Example_Where_Clause">
+    <where>
+      <foreach collection="oredCriteria" item="criteria" separator="or">
+        <if test="criteria.valid">
+          <trim prefix="(" prefixOverrides="and" suffix=")">
+            <foreach collection="criteria.criteria" item="criterion">
+              <choose>
+                <when test="criterion.noValue">
+                  and ${criterion.condition}
+                </when>
+                <when test="criterion.singleValue">
+                  and ${criterion.condition} #{criterion.value}
+                </when>
+                <when test="criterion.betweenValue">
+                  and ${criterion.condition} #{criterion.value} and #{criterion.secondValue}
+                </when>
+                <when test="criterion.listValue">
+                  and ${criterion.condition}
+                  <foreach close=")" collection="criterion.value" item="listItem" open="(" separator=",">
+                    #{listItem}
+                  </foreach>
+                </when>
+              </choose>
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </sql>
+  <sql id="Update_By_Example_Where_Clause">
+    <where>
+      <foreach collection="example.oredCriteria" item="criteria" separator="or">
+        <if test="criteria.valid">
+          <trim prefix="(" prefixOverrides="and" suffix=")">
+            <foreach collection="criteria.criteria" item="criterion">
+              <choose>
+                <when test="criterion.noValue">
+                  and ${criterion.condition}
+                </when>
+                <when test="criterion.singleValue">
+                  and ${criterion.condition} #{criterion.value}
+                </when>
+                <when test="criterion.betweenValue">
+                  and ${criterion.condition} #{criterion.value} and #{criterion.secondValue}
+                </when>
+                <when test="criterion.listValue">
+                  and ${criterion.condition}
+                  <foreach close=")" collection="criterion.value" item="listItem" open="(" separator=",">
+                    #{listItem}
+                  </foreach>
+                </when>
+              </choose>
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </sql>
+  <sql id="Base_Column_List">
+    id, name, type, face_value, inventory_flag, restrict_flag, application_type, fix_type, 
+    start_time, end_time, expire_day, description, common_state, on_line_flag,repeat_flag, create_time,
+    update_time
+  </sql>
+  <select id="selectByExample" parameterType="com.edu.sky.promotion.po.example.CouponExample" resultMap="BaseResultMap">
+    select
+    <if test="distinct">
+      distinct
+    </if>
+    <include refid="Base_Column_List" />
+    from t_coupon
+    <if test="_parameter != null">
+      <include refid="Example_Where_Clause" />
+    </if>
+    <if test="orderByClause != null">
+      order by ${orderByClause}
+    </if>
+  </select>
+  <delete id="deleteByExample" parameterType="com.edu.sky.promotion.po.example.CouponExample">
+    delete from t_coupon
+    <if test="_parameter != null">
+      <include refid="Example_Where_Clause" />
+    </if>
+  </delete>
+  <insert id="insert" parameterType="com.edu.sky.promotion.po.entity.Coupon">
+    insert into t_coupon (id, name, type, 
+      face_value, inventory_flag, restrict_flag, 
+      application_type, fix_type, start_time, 
+      end_time, expire_day, description, 
+      common_state, on_line_flag, create_time, 
+      update_time)
+    values (#{id,jdbcType=BIGINT}, #{name,jdbcType=VARCHAR}, #{type,jdbcType=TINYINT}, 
+      #{faceValue,jdbcType=DOUBLE}, #{inventoryFlag,jdbcType=BIT}, #{restrictFlag,jdbcType=BIT}, 
+      #{applicationType,jdbcType=TINYINT}, #{fixType,jdbcType=TINYINT}, #{startTime,jdbcType=TIMESTAMP}, 
+      #{endTime,jdbcType=TIMESTAMP}, #{expireDay,jdbcType=SMALLINT}, #{description,jdbcType=VARCHAR}, 
+      #{commonState,jdbcType=TINYINT}, #{onLineFlag,jdbcType=TINYINT}, #{createTime,jdbcType=TIMESTAMP}, 
+      #{updateTime,jdbcType=TIMESTAMP})
+  </insert>
+  <insert id="insertSelective" parameterType="com.edu.sky.promotion.po.entity.Coupon" useGeneratedKeys="true" keyProperty="id">
+    insert into t_coupon
+    <trim prefix="(" suffix=")" suffixOverrides=",">
+      <if test="id != null">
+        id,
+      </if>
+      <if test="name != null">
+        name,
+      </if>
+      <if test="type != null">
+        type,
+      </if>
+      <if test="faceValue != null">
+        face_value,
+      </if>
+      <if test="inventoryFlag != null">
+        inventory_flag,
+      </if>
+      <if test="restrictFlag != null">
+        restrict_flag,
+      </if>
+      <if test="applicationType != null">
+        application_type,
+      </if>
+      <if test="fixType != null">
+        fix_type,
+      </if>
+      <if test="startTime != null">
+        start_time,
+      </if>
+      <if test="endTime != null">
+        end_time,
+      </if>
+      <if test="expireDay != null">
+        expire_day,
+      </if>
+      <if test="description != null">
+        description,
+      </if>
+      <if test="commonState != null">
+        common_state,
+      </if>
+      <if test="onLineFlag != null">
+        on_line_flag,
+      </if>
+      <if test="createTime != null">
+        create_time,
+      </if>
+      <if test="updateTime != null">
+        update_time,
+      </if>
+    </trim>
+    <trim prefix="values (" suffix=")" suffixOverrides=",">
+      <if test="id != null">
+        #{id,jdbcType=BIGINT},
+      </if>
+      <if test="name != null">
+        #{name,jdbcType=VARCHAR},
+      </if>
+      <if test="type != null">
+        #{type,jdbcType=TINYINT},
+      </if>
+      <if test="faceValue != null">
+        #{faceValue,jdbcType=DOUBLE},
+      </if>
+      <if test="inventoryFlag != null">
+        #{inventoryFlag,jdbcType=BIT},
+      </if>
+      <if test="restrictFlag != null">
+        #{restrictFlag,jdbcType=BIT},
+      </if>
+      <if test="applicationType != null">
+        #{applicationType,jdbcType=TINYINT},
+      </if>
+      <if test="fixType != null">
+        #{fixType,jdbcType=TINYINT},
+      </if>
+      <if test="startTime != null">
+        #{startTime,jdbcType=TIMESTAMP},
+      </if>
+      <if test="endTime != null">
+        #{endTime,jdbcType=TIMESTAMP},
+      </if>
+      <if test="expireDay != null">
+        #{expireDay,jdbcType=SMALLINT},
+      </if>
+      <if test="description != null">
+        #{description,jdbcType=VARCHAR},
+      </if>
+      <if test="commonState != null">
+        #{commonState,jdbcType=TINYINT},
+      </if>
+      <if test="onLineFlag != null">
+        #{onLineFlag,jdbcType=TINYINT},
+      </if>
+      <if test="createTime != null">
+        #{createTime,jdbcType=TIMESTAMP},
+      </if>
+      <if test="updateTime != null">
+        #{updateTime,jdbcType=TIMESTAMP},
+      </if>
+    </trim>
+  </insert>
+  <select id="countByExample" parameterType="com.edu.sky.promotion.po.example.CouponExample" resultType="java.lang.Long">
+    select count(*) from t_coupon
+    <if test="_parameter != null">
+      <include refid="Example_Where_Clause" />
+    </if>
+  </select>
+  <update id="updateByExampleSelective" parameterType="map">
+    update t_coupon
+    <set>
+      <if test="record.id != null">
+        id = #{record.id,jdbcType=BIGINT},
+      </if>
+      <if test="record.name != null">
+        name = #{record.name,jdbcType=VARCHAR},
+      </if>
+      <if test="record.type != null">
+        type = #{record.type,jdbcType=TINYINT},
+      </if>
+      <if test="record.faceValue != null">
+        face_value = #{record.faceValue,jdbcType=DOUBLE},
+      </if>
+      <if test="record.inventoryFlag != null">
+        inventory_flag = #{record.inventoryFlag,jdbcType=BIT},
+      </if>
+      <if test="record.restrictFlag != null">
+        restrict_flag = #{record.restrictFlag,jdbcType=BIT},
+      </if>
+      <if test="record.applicationType != null">
+        application_type = #{record.applicationType,jdbcType=TINYINT},
+      </if>
+      <if test="record.fixType != null">
+        fix_type = #{record.fixType,jdbcType=TINYINT},
+      </if>
+      <if test="record.startTime != null">
+        start_time = #{record.startTime,jdbcType=TIMESTAMP},
+      </if>
+      <if test="record.endTime != null">
+        end_time = #{record.endTime,jdbcType=TIMESTAMP},
+      </if>
+      <if test="record.expireDay != null">
+        expire_day = #{record.expireDay,jdbcType=SMALLINT},
+      </if>
+      <if test="record.description != null">
+        description = #{record.description,jdbcType=VARCHAR},
+      </if>
+      <if test="record.commonState != null">
+        common_state = #{record.commonState,jdbcType=TINYINT},
+      </if>
+      <if test="record.onLineFlag != null">
+        on_line_flag = #{record.onLineFlag,jdbcType=TINYINT},
+      </if>
+      <if test="record.createTime != null">
+        create_time = #{record.createTime,jdbcType=TIMESTAMP},
+      </if>
+      <if test="record.updateTime != null">
+        update_time = #{record.updateTime,jdbcType=TIMESTAMP},
+      </if>
+    </set>
+    <if test="_parameter != null">
+      <include refid="Update_By_Example_Where_Clause" />
+    </if>
+  </update>
+  <update id="updateByExample" parameterType="map">
+    update t_coupon
+    set id = #{record.id,jdbcType=BIGINT},
+      name = #{record.name,jdbcType=VARCHAR},
+      type = #{record.type,jdbcType=TINYINT},
+      face_value = #{record.faceValue,jdbcType=DOUBLE},
+      inventory_flag = #{record.inventoryFlag,jdbcType=BIT},
+      restrict_flag = #{record.restrictFlag,jdbcType=BIT},
+      application_type = #{record.applicationType,jdbcType=TINYINT},
+      fix_type = #{record.fixType,jdbcType=TINYINT},
+      start_time = #{record.startTime,jdbcType=TIMESTAMP},
+      end_time = #{record.endTime,jdbcType=TIMESTAMP},
+      expire_day = #{record.expireDay,jdbcType=SMALLINT},
+      description = #{record.description,jdbcType=VARCHAR},
+      common_state = #{record.commonState,jdbcType=TINYINT},
+      on_line_flag = #{record.onLineFlag,jdbcType=TINYINT},
+      create_time = #{record.createTime,jdbcType=TIMESTAMP},
+      update_time = #{record.updateTime,jdbcType=TIMESTAMP}
+    <if test="_parameter != null">
+      <include refid="Update_By_Example_Where_Clause" />
+    </if>
+  </update>
+
+  <select id="selectById" parameterType="java.lang.Long" resultMap="BaseResultMap">
+    SELECT
+    <include refid="Base_Column_List"/>
+    FROM t_coupon WHERE id = #{id}
+  </select>
+
+  <select id="selectByPage" parameterType="map" resultMap="BaseResultMap">
+      SELECT <include refid="Base_Column_List"/> FROM `t_coupon`
+        WHERE 1=1
+          <if test="record.type != null">
+              AND `type` = #{record.type}
+          </if>
+          <if test="record.commonState != null or record.commonState = 0">
+              AND common_state = #{record.commonState}
+          </if>
+          <if test="record.onLineFlag != null or record.onLineFlag == 0">
+              AND on_line_flag = #{record.onLineFlag}
+          </if>
+        ORDER BY createTime DESC
+      LIMIT #{limit} OFFSET #{offset}
+  </select>
+  <select id="selectByPageCount" parameterType="map" resultType="java.lang.Integer">
+      SELECT COUNT(id) FROM `t_coupon`
+      WHERE 1=1
+      <if test="record.type != null">
+          AND `type` = #{record.type}
+      </if>
+      <if test="record.commonState != null or record.commonState = 0">
+          AND common_state = #{record.commonState}
+      </if>
+      <if test="record.onLineFlag != null or record.onLineFlag == 0">
+          AND on_line_flag = #{record.onLineFlag}
+      </if>
+  </select>
+    <select id="selectByIdList" parameterType="java.util.List" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List" />
+        FROM t_coupon
+        WHERE common_state = 0
+        AND id IN
+        <foreach collection="list" item="item" open="(" separator="," close=")" >
+            #{item}
+        </foreach>
+    </select>
+    <select id="selectJoinByCodeOrCouponCodeId" parameterType="java.util.Map" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List" />
+        FROM t_coupon tc
+        INNER JOIN t_coupon_code tcc ON tcc.coupon_id = tc.id
+        where 1 = 1
+            <if test="code != null">
+               AND tcc.`code` = #{code}
+            </if>
+            <if test="couponCodeId != null">
+                AND tcc.id = #{couponCodeId}
+            </if>
+    </select>
+</mapper>
