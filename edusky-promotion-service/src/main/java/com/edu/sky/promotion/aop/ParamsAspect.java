@@ -47,7 +47,7 @@ public class ParamsAspect {
             String className = point.getTarget().getClass().getName();
             Class<?> clazz = Class.forName(className);
             Method[] methods = clazz.getMethods();
-            List<Method> methodList = (new ArrayList<Method>(Arrays.asList(methods)));
+            List<Method> methodList = new ArrayList<Method>(Arrays.asList(methods));
             Method method = methodList.stream().filter(m -> m.getName().equals(methodName)).findFirst().get();
             int count = method.getParameterCount();
             if (count == 0) {

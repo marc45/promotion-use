@@ -5,9 +5,11 @@ import com.edu.sky.promotion.aop.ParamAsp;
 import com.edu.sky.promotion.po.dao.CouponCodeMapper;
 import com.edu.sky.promotion.po.dao.CouponMapper;
 import com.edu.sky.promotion.po.dao.InventoryMapper;
+import com.edu.sky.promotion.po.dao.RestrictConditionMapper;
 import com.edu.sky.promotion.po.entity.Coupon;
 import com.edu.sky.promotion.po.entity.CouponCode;
 import com.edu.sky.promotion.po.entity.Inventory;
+import com.edu.sky.promotion.po.entity.RestrictCondition;
 import com.edu.sky.promotion.po.example.CouponCodeExample;
 import com.edu.sky.promotion.po.example.CouponExample;
 import com.edu.sky.promotion.po.example.InventoryExample;
@@ -36,6 +38,8 @@ public class CouponServiceImpl implements CouponService {
     private CouponCodeMapper couponCodeMapper;
     @Autowired
     private InventoryMapper inventoryMapper;
+    @Autowired
+    private RestrictConditionMapper restrictConditionMapper;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -53,9 +57,9 @@ public class CouponServiceImpl implements CouponService {
         } else if (coupon.getFixType() == 1) {
             expirationTime = coupon.getEndTime();
         }
-        int res = couponMapper.insertSelective(coupon);
-        if (res < 1) {
-            return null;
+        boolean flag = couponMapper.insertSelective(coupon) == 1;
+        if (!flag) {
+            return flag;
         }
         Long id = coupon.getId();
         Inventory inventory = new Inventory();
@@ -65,6 +69,14 @@ public class CouponServiceImpl implements CouponService {
             inventory.setTotalAmount(coupon.getAmount());
         }
         int res1 = inventoryMapper.insertSelective(inventory);
+        List<RestrictCondition> restrictConditions = coupon.getRestrictConditions();
+        restrictConditions.forEach(cond -> {
+            cond.setCouponId(id);
+        });
+        int res3 = restrictConditionMapper.insertList(restrictConditions);
+        if (res3 != restrictConditions.size()) {
+            throw new RuntimeException("优惠码增加限制条件失败!");
+        }
         List<CouponCode> couponCodes = new ArrayList<>();
         for (int i = 0; i < coupon.getAmount(); i++) {
             CouponCode couponCode = new CouponCode();
@@ -81,26 +93,30 @@ public class CouponServiceImpl implements CouponService {
             int res2 = couponCodeMapper.insertList(couponCodes);
             if (res2 == couponCodes.size()) {
                 long endTimes = System.currentTimeMillis();
-                logger.info("批量插入数据耗时(毫秒)：" + (endTimes - startTime));
+                logger.info("批量优惠码增加数据耗时(毫秒)：" + (endTimes - startTime));
                 return coupon.getId();
             } else {
-                throw new RuntimeException("批量插入数据出现异常");
+                throw new RuntimeException("批量优惠码增加数据失败！");
             }
         }
-        //后续:抢红包或者秒杀系列放入redis中
-
         return coupon.getId();
     }
 
+    @Override
+    public Coupon findCouponInfo(Long couponId) {
+        return couponMapper.selectByIdJoinInventoryAndConditions(couponId);
+    }
 
     @Override//只能追加数量和延长时间,修改个人是否能够重复领取
     @Transactional
-    public Boolean updateAddToCoupon(@ParamAsp("coupon") Coupon coupon) {
-        coupon.setUpdateTime(new Date());
+    public Object updateAddToCoupon(@ParamAsp("coupon") Coupon coupon) {
         boolean flag = false;
         Coupon coupon1 = couponMapper.selectById(coupon.getId());
         if (coupon1 == null && coupon1.getId() == null) {
             return flag;
+        }
+        if (coupon1.getCommonState().byteValue() != 2) {
+            return 106;//追加前请先把优惠券下架
         }
         //数量追加
         if (coupon.getAmount() != null && coupon.getAmount() > 0 ) {
@@ -133,7 +149,7 @@ public class CouponServiceImpl implements CouponService {
                 coupon1.setExpireDay(coupon.getExpireDay());
             }
         }
-        int res = 0;
+        coupon.setUpdateTime(new Date());
         flag = couponMapper.addToUpdateCoupon(coupon1) == 1;
         if (flag) {
             //追加优惠券库存表总库存数量
@@ -155,11 +171,8 @@ public class CouponServiceImpl implements CouponService {
             }
             CouponCodeExample example = new CouponCodeExample();
             CouponCodeExample.Criteria criteria = example.createCriteria();
-            criteria.andCouponIdEqualTo(coupon1.getId()).andExportFlagEqualTo(false);
-            int res2 = couponCodeMapper.updateByExampleSelective(couponCode, example);
-            if (res2 > 0) {
-                flag = true;
-            }
+            criteria.andCouponIdEqualTo(coupon1.getId());
+            flag = couponCodeMapper.updateByExampleSelective(couponCode, example) > 0;
         }
         if (!flag) {
             throw new RuntimeException("优惠券追加失败!");
@@ -169,13 +182,16 @@ public class CouponServiceImpl implements CouponService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public Boolean changeActiveState(@ParamAsp("couponId") Long couponId,@ParamAsp("activeState") Integer activeState) {
+    public Boolean changeActiveState(@ParamAsp("couponId") Long couponId,@ParamAsp("commonState") Integer commonState) {
+        if (couponId == null || commonState == null) {
+            return false;
+        }
         CouponExample example = new CouponExample();
         CouponExample.Criteria criteria = example.createCriteria();
         criteria.andIdEqualTo(couponId);
         Coupon coupon = new Coupon();
         coupon.setId(couponId);
-        coupon.setCommonState(activeState.byteValue());
+        coupon.setCommonState(commonState.byteValue());
         coupon.setUpdateTime(new Date());
         return couponMapper.updateByExampleSelective(coupon, example) == 1;
     }
@@ -183,8 +199,34 @@ public class CouponServiceImpl implements CouponService {
     @Override
     public List<Coupon> couponList(@ParamAsp("coupon") Coupon coupon) {
         CouponExample example = new CouponExample();
-        CouponExample.Criteria criteria = example.createCriteria();
-        criteria.andCommonStateEqualTo((byte) 0);
+        if (coupon != null) {
+            CouponExample.Criteria criteria = example.createCriteria();
+            criteria.andDelFlagEqualTo(false);
+            if (coupon.getCommonState() != null) {
+                criteria.andCommonStateEqualTo(coupon.getCommonState());
+            }
+            if (coupon.getRepeatFlag()) {
+                criteria.andRepeatFlagEqualTo(coupon.getRepeatFlag());
+            }
+            if (coupon.getInventoryFlag()) {
+                criteria.andInventoryFlagEqualTo(coupon.getInventoryFlag());
+            }
+            if (coupon.getFixType() != null) {
+                criteria.andFixTypeEqualTo(coupon.getFixType());
+            }
+            if (coupon.getType() != null) {
+                criteria.andTypeEqualTo(coupon.getType());
+            }
+            if (coupon.getOnLineFlag() != null) {
+                criteria.andOnLineFlagEqualTo(coupon.getOnLineFlag());
+            }
+            if (coupon.getHomeShow()) {
+                criteria.andHomeShowEqualTo(coupon.getHomeShow());
+            }
+            if (coupon.getApplicationType() != null) {
+                criteria.andApplicationTypeEqualTo(coupon.getApplicationType());
+            }
+        }
         return couponMapper.selectByExample(example);
     }
 
@@ -198,11 +240,21 @@ public class CouponServiceImpl implements CouponService {
     }
 
     @Override
-    public Coupon findCouponByCodeOrCouponCode(String code, Long couponCodeId) {
+    public Coupon findCouponByCodeOrCouponCode(@ParamAsp("code") String code,@ParamAsp("couponCodeId") Long couponCodeId) {
         if (code == null && couponCodeId == null) {
             return null;
         }
         return couponMapper.selectJoinByCodeOrCouponCodeId(code,couponCodeId);
+    }
+
+    @Override
+    public List<Coupon> findCouponByHomeShow() {
+        CouponExample example = new CouponExample();
+        CouponExample.Criteria criteria = example.createCriteria();
+        criteria.andDelFlagEqualTo(false).andCommonStateEqualTo((byte) 1)
+                .andInventoryFlagEqualTo(false).andOnLineFlagEqualTo((byte) 1)
+                .andHomeShowEqualTo(true);
+        return couponMapper.selectByExample(example);
     }
 
 /*--------------------------------------------------------------------------------------------------------------------*/

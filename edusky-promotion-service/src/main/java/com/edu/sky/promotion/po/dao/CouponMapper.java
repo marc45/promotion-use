@@ -2,6 +2,7 @@ package com.edu.sky.promotion.po.dao;
 
 import com.edu.sky.promotion.po.entity.Coupon;
 import com.edu.sky.promotion.po.example.CouponExample;
+import com.edu.sky.wares.api.domain.Wares;
 import org.apache.ibatis.annotations.Param;
 import org.springframework.stereotype.Repository;
 
@@ -34,7 +35,7 @@ public interface CouponMapper extends BaseMapper<Coupon, CouponExample, Long> {
      * @param coupon
      * @return
      */
-    long selectByPageCount(@Param("record") Coupon coupon);
+    int selectByPageCount(@Param("record") Coupon coupon);
 
     /**根据couponId集合查询优惠券
      * @param couponIds
@@ -48,4 +49,10 @@ public interface CouponMapper extends BaseMapper<Coupon, CouponExample, Long> {
      * @return
      */
     Coupon selectJoinByCodeOrCouponCodeId(String code, Long couponCodeId);
+
+    /**根据couponId查询coupon信息：包含库存和限制条件等
+     * @param couponId
+     * @return
+     */
+    Coupon selectByIdJoinInventoryAndConditions(Long couponId);
 }

@@ -13,6 +13,13 @@ public class RestrictCondition implements Serializable {
     private Long id;
 
     /**
+     *优惠券id
+     * 表字段 : t_restrict_condition.coupon_id
+     *
+     */
+    private Long couponId;
+
+    /**
      * 限制条件描述
      * 表字段 : t_restrict_condition.describe
      * 
@@ -93,5 +100,13 @@ public class RestrictCondition implements Serializable {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public Long getCouponId() {
+        return couponId;
+    }
+
+    public void setCouponId(Long couponId) {
+        this.couponId = couponId;
     }
 }

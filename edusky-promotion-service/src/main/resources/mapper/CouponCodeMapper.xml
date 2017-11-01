@@ -102,26 +102,37 @@
     </if>
     LIMIT #{limit} OFFSET #{offset}
   </select>
-    <resultMap id="JoinCouponUserResultMap" type="com.edu.sky.promotion.po.entity.CouponCode" extends="BaseResultMap">
-        <result column="couponName" property="couponName"/>
-    </resultMap>
-  <select id="selectByJoinPage" parameterType="java.util.Map" resultMap="JoinCouponUserResultMap">
-      SELECT
-        tcc.*,tc.`name` AS couponName
+  <resultMap id="JoinCouponUserAndRestrictResultMap" type="com.edu.sky.promotion.po.entity.CouponCode" extends="BaseResultMap">
+    <result column="couponName" property="couponName"/>
+    <result column="couponApplicationType" property="couponApplicationType"/>
+    <collection property="restrictConditions" ofType="com.edu.sky.promotion.po.entity.RestrictCondition">
+      <result column="restrict_condition_id" property="id"/>
+      <result column="type" property="type"/>
+      <result column="restrict_value" property="restrictValue"/>
+      <result column="description" property="description"/>
+    </collection>
+  </resultMap>
+  <select id="selectByJoinPage" parameterType="java.util.Map" resultMap="JoinCouponUserAndRestrictResultMap">
+      SELECT tcc.id,tcc.used_flag,tcc.expiration_time,tcc.code
+              ,tc.`name` AS couponName,tc.application_type AS couponApplicationType
+              ,trc.id AS restrict_condition_id,trc.type,trc.restrict_value,trc.description
       FROM t_coupon_code tcc
       RIGHT JOIN t_coupon_user tcu ON tcu.coupon_code_id = tcc.id
       INNER JOIN t_coupon tc ON tc.id = tcc.coupon_id
-      WHERE 1=1
+      LEFT JOIN t_restrict_condition trc ON trc.coupon_id = tcc.coupon_id
+      WHERE 1=1 AND tcc.expiration_time >= NOW()
       <if test="openId != null">
           AND tcu.user_open_id = #{openId}
       </if>
-      <if test="usedFlag != null or usedFlag == 0">
-          AND tcc.used_flag = #{usedFlag}
-      </if>
-      <if test="couponId != null">
-          AND tc.id = #{couponId}
-      </if>
-      ORDER BY tcc.used_flag ASC,tcc.bind_time DESC
+      <choose>
+        <when test="usedFlag == 0">
+          AND tcc.used_flag = 0
+        </when>
+        <otherwise>
+          AND tcc.used_flag != 0
+        </otherwise>
+      </choose>
+      ORDER BY tcc.used_flag ASC,tcc.expiration_time DESC
       LIMIT #{limit} OFFSET #{offset}
   </select>
     <select id="selectByJoinCount" parameterType="java.util.Map" resultType="java.lang.Long">
@@ -307,4 +318,17 @@
       <include refid="Update_By_Example_Where_Clause" />
     </if>
   </update>
+  <select id="selectConditionByOpenId" parameterType="java.util.Map" resultMap="JoinCouponUserAndRestrictResultMap">
+      SELECT tcc.id,tcc.used_flag,tcc.expiration_time,tcc.code
+              ,tc.`name` AS couponName,tc.application_type AS couponApplicationType
+              ,trc.id AS restrict_condition_id,trc.type,trc.restrict_value,trc.description
+      FROM `t_coupon_code` tcc
+      LEFT JOIN t_coupon_user tcu ON tcu.coupon_code_id = tcc.id
+      LEFT JOIN t_coupon tc ON tc.id = tcc.coupon_id
+      LEFT JOIN t_restrict_condition trc ON trc.coupon_id = tcc.coupon_id
+      WHERE tcc.used_flag = 0
+      AND tc.common_state = 0
+      AND tc.del_flag = 0
+      AND tcu.user_open_id = #{openId}
+  </select>
 </mapper>

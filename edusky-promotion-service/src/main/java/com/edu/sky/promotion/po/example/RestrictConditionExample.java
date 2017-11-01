@@ -125,6 +125,11 @@ public class RestrictConditionExample {
             return (Criteria) this;
         }
 
+        public Criteria andCouponIdEqualTo(Long value) {
+            addCriterion("coupon_id =", value, "couponId");
+            return (Criteria) this;
+        }
+
         public Criteria andIdGreaterThan(Long value) {
             addCriterion("id >", value, "id");
             return (Criteria) this;

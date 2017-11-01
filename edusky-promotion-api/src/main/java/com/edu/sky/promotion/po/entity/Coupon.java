@@ -2,6 +2,7 @@ package com.edu.sky.promotion.po.entity;
 
 import java.io.Serializable;
 import java.util.Date;
+import java.util.List;
 
 public class Coupon implements Serializable {
     private static final long serialVersionUID = 6123064388003116678L;
@@ -48,7 +49,7 @@ public class Coupon implements Serializable {
     private Boolean restrictFlag;
 
     /**
-     * 使用类型（0通用，1其他带扩展）
+     * 使用类型（0通用,1课程使用,3测评使用）
      * 表字段 : t_coupon.application_type
      * 
      */
@@ -90,7 +91,7 @@ public class Coupon implements Serializable {
     private String description;
 
     /**
-     * 0正常，1停用，2删除，3用光了
+     * 0未上架，1上架，2下架
      * 表字段 : t_coupon.common_state
      * 
      */
@@ -123,8 +124,24 @@ public class Coupon implements Serializable {
      */
     private Date updateTime;
 
+    /**
+     * 0未删除,1已删除
+     * 表字段 : t_coupon.del_flag
+     *
+     */
+    private Boolean delFlag;
+
+    /**
+     * 是否界面显示(0否,1是)
+     * 表字段 : t_coupon.home_show
+     *
+     */
+    private Boolean homeShow;
+
     //库存总量
     private Long amount;
+    private Inventory inventory;//库存信息
+    private List<RestrictCondition> restrictConditions;//优惠券使用条件集合
 
     public Long getId() {
         return id;
@@ -268,5 +285,29 @@ public class Coupon implements Serializable {
 
     public void setRepeatFlag(Boolean repeatFlag) {
         this.repeatFlag = repeatFlag;
+    }
+
+    public Boolean getDelFlag() {
+        return delFlag;
+    }
+
+    public void setDelFlag(Boolean delFlag) {
+        this.delFlag = delFlag;
+    }
+
+    public Boolean getHomeShow() {
+        return homeShow;
+    }
+
+    public void setHomeShow(Boolean homeShow) {
+        this.homeShow = homeShow;
+    }
+
+    public List<RestrictCondition> getRestrictConditions() {
+        return restrictConditions;
+    }
+
+    public void setRestrictConditions(List<RestrictCondition> restrictConditions) {
+        this.restrictConditions = restrictConditions;
     }
 }

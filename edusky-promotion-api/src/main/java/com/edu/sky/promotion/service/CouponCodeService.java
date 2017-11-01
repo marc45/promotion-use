@@ -6,13 +6,13 @@ import java.util.List;
 
 public interface CouponCodeService {
 
-    /**查询列表
+    /**查询列表：根据条件查询
      * @param couponCode 优惠码查询类
      * @return
      */
     List<CouponCode> couponCodeList(CouponCode couponCode);
 
-    /**查询分页列表
+    /**查询分页列表：根据couponCode各种条件查询
      * @param couponCode 优惠码查询类
      * @param pageSize
      * @param pageNum
@@ -41,11 +41,14 @@ public interface CouponCodeService {
      */
     Object bindCouponCode4User(String couponCode,String openId);
 
-    /**用户优惠码列表：已绑定没有使用的，已过期的
-     * @param openId
+    /**用户优惠码列表：可以使用，不可使用
+     * @param openId 用户openId
+     * @param useFlag 0可以使用，1不可使用（已使用和已过期）
+     * @param pageNum
+     * @param pageSize
      * @return
      */
-    Object couponCodePage4User(String openId,Integer pageNum,Integer pageSize);
+    Object couponCodePage4User(String openId,Boolean useFlag,Integer pageNum,Integer pageSize);
 
     /**用户使用优惠券购物，更新库存相关字段
      * @param code
@@ -53,6 +56,15 @@ public interface CouponCodeService {
      * @return
      */
     Object userUseCouponCode(String code, String openId);
+
+    /**根据商品id集合，订单总价查询优惠券信息:
+     *      查询优惠券类型，限制条件找出符合的优惠券信息列表
+     * @param waresIds 商品id集合
+     * @param waresPrice 订单总价
+     * @param openId 用户opengId
+     * @return
+     */
+    Object findCouponListByWaresId(List<Long> waresIds,Integer waresPrice,String openId);
 
 
 }

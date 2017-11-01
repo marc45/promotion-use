@@ -5,9 +5,9 @@ import java.util.List;
 
 public class PageBean<T> implements Serializable{
 	
-	private int cp;
+	private int currentPage;
 	
-	private int pz;
+	private int pageSize;
 
     private long totalCount;
 
@@ -16,8 +16,8 @@ public class PageBean<T> implements Serializable{
     public PageBean(){
     }
     public PageBean(int cp,int pz){
-        this.cp = cp == 0 ? 1 : cp;
-        this.pz = pz == 0 ? 10 : pz;
+        this.currentPage = cp == 0 ? 1 : cp;
+        this.pageSize = pz == 0 ? 10 : pz;
     }
 
 	public static int getOffset(int cp, int pz){
@@ -25,11 +25,11 @@ public class PageBean<T> implements Serializable{
     }
 
     public int getCp() {
-        return cp;
+        return currentPage;
     }
 
     public int getPz() {
-        return pz;
+        return pageSize;
     }
 
     public long getTotalCount() {

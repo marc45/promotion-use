@@ -2,6 +2,7 @@ package com.edu.sky.promotion.po.entity;
 
 import java.io.Serializable;
 import java.util.Date;
+import java.util.List;
 
 public class CouponCode implements Serializable {
     private static final long serialVersionUID = -635717719130049934L;
@@ -84,6 +85,8 @@ public class CouponCode implements Serializable {
     private Date updateTime;
 
     private String openId;//用户code
+    private Byte couponApplicationType;//使用类型
+    private List<RestrictCondition> restrictConditions;//优惠券使用条件集合
 
     public Long getId() {
         return id;
@@ -187,5 +190,21 @@ public class CouponCode implements Serializable {
 
     public void setOpenId(String openId) {
         this.openId = openId;
+    }
+
+    public List<RestrictCondition> getRestrictConditions() {
+        return restrictConditions;
+    }
+
+    public void setRestrictConditions(List<RestrictCondition> restrictConditions) {
+        this.restrictConditions = restrictConditions;
+    }
+
+    public Byte getCouponApplicationType() {
+        return couponApplicationType;
+    }
+
+    public void setCouponApplicationType(Byte couponApplicationType) {
+        this.couponApplicationType = couponApplicationType;
     }
 }

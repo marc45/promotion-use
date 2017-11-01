@@ -429,6 +429,14 @@ public class CouponExample {
             addCriterion("restrict_flag =", value, "restrictFlag");
             return (Criteria) this;
         }
+        public Criteria andDelFlagEqualTo(Boolean value) {
+            addCriterion("del_flag =", value, "delFlag");
+            return (Criteria) this;
+        }
+        public Criteria andHomeShowEqualTo(Boolean value) {
+            addCriterion("home_show =", value, "homeFlag");
+            return (Criteria) this;
+        }
         public Criteria andRepeatFlagEqualTo(Boolean value) {
             addCriterion("repeat_flag =", value, "repeatFlag");
             return (Criteria) this;

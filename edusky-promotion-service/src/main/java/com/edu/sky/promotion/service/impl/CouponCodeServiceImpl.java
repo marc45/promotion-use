@@ -1,30 +1,31 @@
 package com.edu.sky.promotion.service.impl;
 
+import com.alibaba.dubbo.config.annotation.Reference;
 import com.alibaba.dubbo.config.annotation.Service;
 import com.edu.sky.promotion.aop.ParamAsp;
+import com.edu.sky.promotion.model.WaresQueryModel;
 import com.edu.sky.promotion.po.dao.CouponCodeMapper;
 import com.edu.sky.promotion.po.dao.CouponMapper;
 import com.edu.sky.promotion.po.dao.CouponUserMapper;
 import com.edu.sky.promotion.po.dao.InventoryMapper;
-import com.edu.sky.promotion.po.entity.Coupon;
-import com.edu.sky.promotion.po.entity.CouponCode;
-import com.edu.sky.promotion.po.entity.CouponUser;
-import com.edu.sky.promotion.po.entity.Inventory;
+import com.edu.sky.promotion.po.entity.*;
 import com.edu.sky.promotion.po.example.CouponCodeExample;
 import com.edu.sky.promotion.po.example.InventoryExample;
 import com.edu.sky.promotion.service.CouponCodeService;
 import com.edu.sky.promotion.util.DateUtils;
 import com.edu.sky.promotion.util.PageBean;
 import com.edu.sky.promotion.util.RandomCodeUtils;
+import com.edu.sky.wares.api.domain.Wares;
+import com.edu.sky.wares.api.domain.WaresQuery;
+import com.edu.sky.wares.api.service.WaresService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service(version = "1.0",timeout = 15000,retries = 0)
 @org.springframework.stereotype.Service
@@ -40,6 +41,8 @@ public class CouponCodeServiceImpl implements CouponCodeService {
     private CouponMapper couponMapper;
     @Autowired
     private InventoryMapper inventoryMapper;
+    @Reference(version = "1.0",timeout = 12000)
+    private WaresService waresService;
 
     @Override
     public List<CouponCode> couponCodeList(@ParamAsp("couponCode") CouponCode couponCode) {
@@ -175,10 +178,13 @@ public class CouponCodeServiceImpl implements CouponCodeService {
     }
 
     @Override
-    public Object couponCodePage4User(@ParamAsp("openId") String openId,@ParamAsp("pageNum")Integer pageNum
-            ,@ParamAsp("pageSize")Integer pageSize) {
+    public Object couponCodePage4User(@ParamAsp("openId") String openId,@ParamAsp("openId") Boolean useFlag
+            ,@ParamAsp("pageNum")Integer pageNum,@ParamAsp("pageSize")Integer pageSize) {
         PageBean<CouponCode> pageBean = new PageBean(pageNum,pageSize);
-        pageBean.setList(couponCodeMapper.selectByJoinPage(openId ,null,null, pageSize
+        if (StringUtils.isEmpty(useFlag)) {
+            useFlag = false;
+        }
+        pageBean.setList(couponCodeMapper.selectByJoinPage(openId ,useFlag, pageSize
                 ,PageBean.getOffset(pageNum, pageSize)));
         pageBean.setTotalCount(couponCodeMapper.selectByJoinCount(openId,null,null));
         return pageBean;
@@ -220,6 +226,47 @@ public class CouponCodeServiceImpl implements CouponCodeService {
         return flag;
     }
 
+    @Override
+    public Object findCouponListByWaresId(@ParamAsp("waresIds") List<Long> waresIds,@ParamAsp("waresPrice") Integer waresPrice
+            ,@ParamAsp("openId") String openId) {
+        List<Wares> waresList = waresService.queryWaresListByWaresIds(waresIds);
+        if (waresList == null || waresList.isEmpty()) {
+            return null;
+        }
+        //每个商品的productType,gradeCode,subjectCode
+        List<WaresQueryModel> waresQueryModels = new ArrayList<>();
+        for (Wares wares : waresList) {
+            for (Map<String, Object> product : wares.getProducts()) {
+                WaresQueryModel waresQueryModel = new WaresQueryModel();
+                waresQueryModel.setWaresId(wares.getId());
+                waresQueryModel.setProductType(Integer.valueOf(product.get("productType").toString()));
+                waresQueryModel.setId(Long.valueOf(product.get("id").toString()));// 产品id
+                waresQueryModel.setSubjectCode(product.get("subjectCode").toString());
+                waresQueryModel.setGradeCode(product.get("gradeCode").toString());
+                waresQueryModels.add(waresQueryModel);
+            }
+        }
+        List<CouponCode> couponCodes = couponCodeMapper.selectConditionByOpenId(openId);
+        if (couponCodes == null || couponCodes.isEmpty()) {
+            return null;
+        }
+        Map<Long,List<CouponCode>> map = new HashMap<>();
+        //通过商品列表遍历用户优惠码列表
+        for (Wares wares : waresList) {
+            List<CouponCode> waresCouponCodes = new ArrayList<>();
+            for (CouponCode couponCode : couponCodes) {
+                List<RestrictCondition> restrictConditions = couponCode.getRestrictConditions();
+                boolean flag = judgeRestrictCondition(restrictConditions,waresPrice,waresQueryModels,wares.getId());
+                if (flag) {
+                    waresCouponCodes.add(couponCode);
+                }
+            }
+            map.put(wares.getId(),waresCouponCodes);
+        }
+
+        return map;
+    }
+
     /*--------------------------------------------------------------------------------------------------------------------*/
     private CouponCodeExample getExam(CouponCode couponCode,boolean orderFlag){
         CouponCodeExample example = new CouponCodeExample();
@@ -231,6 +278,9 @@ public class CouponCodeServiceImpl implements CouponCodeService {
             if (!StringUtils.isEmpty(couponCode.getCouponId())) {
                 criteria.andCouponIdEqualTo(couponCode.getCouponId());
             }
+            if (!StringUtils.isEmpty(couponCode.getCode())) {
+                criteria.andCodeEqualTo(couponCode.getCode().toUpperCase());
+            }
             if (!StringUtils.isEmpty(couponCode.getUsedFlag())) {
                 criteria.andUsedFlagEqualTo(couponCode.getUsedFlag());
             }
@@ -239,6 +289,9 @@ public class CouponCodeServiceImpl implements CouponCodeService {
             }
             if (!StringUtils.isEmpty(couponCode.getBindType())) {
                 criteria.andBindTypeEqualTo(couponCode.getBindType());
+            }
+            if (!StringUtils.isEmpty(couponCode.getExpirationTime())) {
+                criteria.andExpirationTimeLessThanOrEqualTo(couponCode.getExpirationTime());
             }
         }
         return example;
@@ -387,6 +440,68 @@ public class CouponCodeServiceImpl implements CouponCodeService {
         }
         logger.info("updateInventory更新库存状态耗时(毫秒)：" + (System.currentTimeMillis() - start));
         return res;
+    }
+
+    /**判断条件：一个商品对比所有优惠券的限制条件，
+     * @param conditions
+     * @param waresPrice
+     * @param waresQueryModels
+     * @param waresId
+     * @return
+     */
+    private boolean judgeRestrictCondition(List<RestrictCondition> conditions,Integer waresPrice
+            ,List<WaresQueryModel> waresQueryModels,Long waresId){
+        Map<String,Boolean> judgeMap1 = new HashMap<>();
+        //一个商品的查询条件，对比所有优惠券限制条件：根据查询条件对象
+        for (WaresQueryModel model : waresQueryModels) {
+            Map<String,Boolean> judgeMap = new HashMap<>();
+            for (RestrictCondition condition : conditions) {
+                Boolean flag = false;
+                if (condition.getType().byteValue() == 0) {
+                    if (condition.getRestrictValue() <= waresPrice) {
+                        flag = true;
+                    }
+                }
+                judgeMap.put("price",flag);
+                if (condition.getType().byteValue() == 3) {
+                    if (model.getWaresId().longValue() == waresId.longValue()) {
+                        if (model.getProductType().intValue() == condition.getRestrictValue().intValue()) {
+                            flag = true;
+                        }
+                    }
+                    judgeMap.put("productType",flag);
+                }
+                if (condition.getType().byteValue() == 1) {
+                    if (model.getWaresId().longValue() == waresId.longValue()) {
+                        if (Integer.valueOf(model.getSubjectCode()).intValue()
+                                == condition.getRestrictValue().intValue()) {
+                            flag = true;
+                        }
+                    }
+                    judgeMap.put("subjectCode",flag);
+                }
+                if (condition.getType().byteValue() == 2) {
+                    if (model.getWaresId().longValue() == waresId.longValue()) {
+                        if (Integer.valueOf(model.getGradeCode()).intValue()
+                                == condition.getRestrictValue().intValue()) {
+                            flag = true;
+                        }
+                    }
+                    judgeMap.put("gradeCode",flag);
+                }
+            }
+            boolean b = (judgeMap.get("price") != null ? judgeMap.get("price") : true)
+                    && (judgeMap.get("productType") != null ? judgeMap.get("productType") : true)
+                    && (judgeMap.get("subjectCode") != null ? judgeMap.get("subjectCode") : true)
+                    && (judgeMap.get("gradeCode") != null ? judgeMap.get("gradeCode") : true );
+            judgeMap1.put(model.getId().toString(),b);
+        }
+        for (Map.Entry<String, Boolean> entry : judgeMap1.entrySet()) {
+            if (entry.getValue()) {
+                return true;
+            }
+        }
+        return false;
     }
 
 
