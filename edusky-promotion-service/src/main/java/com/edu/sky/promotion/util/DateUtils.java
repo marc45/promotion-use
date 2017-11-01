@@ -449,11 +449,6 @@ public class DateUtils extends org.apache.commons.lang3.time.DateUtils {
         return calendar.getTime();
     }
 
-    public static void main(String[] args) {
-        SimpleDateFormat sd = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        System.err.println("--->: " + sd.format(new Date(1506527999999l)));
-    }
-
     /**
      * 计算 day 天后的时间
      *

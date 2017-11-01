@@ -271,7 +271,7 @@ public class CouponCodeServiceImpl implements CouponCodeService {
     private CouponCodeExample getExam(CouponCode couponCode,boolean orderFlag){
         CouponCodeExample example = new CouponCodeExample();
         if (orderFlag) {
-            example.setOrderByClause("createTime DESC");
+            example.setOrderByClause("create_time DESC");
         }
         if (couponCode != null) {
             CouponCodeExample.Criteria criteria = example.createCriteria();

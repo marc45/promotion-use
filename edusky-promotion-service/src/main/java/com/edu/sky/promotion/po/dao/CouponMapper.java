@@ -29,13 +29,13 @@ public interface CouponMapper extends BaseMapper<Coupon, CouponExample, Long> {
      * @param offset
      * @return
      */
-    List<Coupon> selectByPage(@Param("record") Coupon coupon, @Param("limit") Integer limit, @Param("offset") Integer offset);
+    List<Coupon> selectByPage(@Param("record") Coupon coupon, @Param("offset") Integer offset, @Param("limit") Integer limit);
 
     /**分页查询总数
      * @param coupon
      * @return
      */
-    int selectByPageCount(@Param("record") Coupon coupon);
+    long selectByPageCount(@Param("record") Coupon coupon);
 
     /**根据couponId集合查询优惠券
      * @param couponIds

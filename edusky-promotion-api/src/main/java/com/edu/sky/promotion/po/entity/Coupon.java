@@ -310,4 +310,12 @@ public class Coupon implements Serializable {
     public void setRestrictConditions(List<RestrictCondition> restrictConditions) {
         this.restrictConditions = restrictConditions;
     }
+
+    public Inventory getInventory() {
+        return inventory;
+    }
+
+    public void setInventory(Inventory inventory) {
+        this.inventory = inventory;
+    }
 }

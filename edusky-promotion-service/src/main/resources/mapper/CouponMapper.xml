@@ -297,20 +297,15 @@
 
   <select id="selectByPage" parameterType="map" resultMap="BaseResultMap">
       SELECT <include refid="Base_Column_List"/> FROM `t_coupon`
-        WHERE 1=1 AND del_flag = 0
-          <if test="record.type != null">
-              AND `type` = #{record.type}
-          </if>
-          <if test="record.commonState != null or record.commonState = 0">
-              AND common_state = #{record.commonState}
-          </if>
-          <if test="record.onLineFlag != null or record.onLineFlag == 0">
-              AND on_line_flag = #{record.onLineFlag}
-          </if>
-        ORDER BY create_time DESC
+      <if test="_parameter != null">
+          <include refid="Update_By_Example_Where_Clause" />
+      </if>
+      <if test="example.orderByClause != null">
+          order by ${example.orderByClause}
+      </if>
       LIMIT #{limit} OFFSET #{offset}
   </select>
-  <select id="selectByPageCount" parameterType="map" resultType="java.lang.Integer">
+  <select id="selectByPageCount" parameterType="java.util.Map" resultType="java.lang.Integer">
       SELECT COUNT(id) FROM `t_coupon`
       WHERE 1=1 AND del_flag = 0
       <if test="record.type != null">
@@ -344,7 +339,7 @@
                 AND tcc.id = #{couponCodeId}
             </if>
     </select>
-    <resultMap id="CouponJoinInventoryAndConditionsResultMap" type="coupon" extends="BaseResultMap">
+    <resultMap id="CouponJoinInventoryAndConditionsResultMap" type="com.edu.sky.promotion.po.entity.Coupon" extends="BaseResultMap">
         <association property="inventory" javaType="com.edu.sky.promotion.po.entity.Inventory">
             <result column="tinvid" property="id"/>
             <result column="total_amount" property="totalAmount"/>
@@ -358,7 +353,7 @@
             <result column="restrict_value" property="restrictValue"/>
         </collection>
     </resultMap>
-    <select id="selectByIdJoinInventoryAndConditions" parameterType="long" resultMap="CouponJoinInventoryAndConditionsResultMap">
+    <select id="selectByIdJoinInventoryAndConditions" parameterType="java.lang.Long" resultMap="CouponJoinInventoryAndConditionsResultMap">
         SELECT tc.id,tc.`name`,tc.`type`,tc.face_value,tc.inventory_flag,tc.fix_type
                 ,tc.start_time,tc.end_time,tc.expire_day,tc.description,tc.common_state
                 ,tc.on_line_flag,tc.repeat_flag,tc.home_show,tc.create_time,tc.update_time

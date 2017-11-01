@@ -198,35 +198,7 @@ public class CouponServiceImpl implements CouponService {
 
     @Override
     public List<Coupon> couponList(@ParamAsp("coupon") Coupon coupon) {
-        CouponExample example = new CouponExample();
-        if (coupon != null) {
-            CouponExample.Criteria criteria = example.createCriteria();
-            criteria.andDelFlagEqualTo(false);
-            if (coupon.getCommonState() != null) {
-                criteria.andCommonStateEqualTo(coupon.getCommonState());
-            }
-            if (coupon.getRepeatFlag()) {
-                criteria.andRepeatFlagEqualTo(coupon.getRepeatFlag());
-            }
-            if (coupon.getInventoryFlag()) {
-                criteria.andInventoryFlagEqualTo(coupon.getInventoryFlag());
-            }
-            if (coupon.getFixType() != null) {
-                criteria.andFixTypeEqualTo(coupon.getFixType());
-            }
-            if (coupon.getType() != null) {
-                criteria.andTypeEqualTo(coupon.getType());
-            }
-            if (coupon.getOnLineFlag() != null) {
-                criteria.andOnLineFlagEqualTo(coupon.getOnLineFlag());
-            }
-            if (coupon.getHomeShow()) {
-                criteria.andHomeShowEqualTo(coupon.getHomeShow());
-            }
-            if (coupon.getApplicationType() != null) {
-                criteria.andApplicationTypeEqualTo(coupon.getApplicationType());
-            }
-        }
+        CouponExample example  = getExample(coupon,true);
         return couponMapper.selectByExample(example);
     }
 
@@ -234,8 +206,9 @@ public class CouponServiceImpl implements CouponService {
     public Object couponPage(@ParamAsp("coupon") Coupon coupon,@ParamAsp("pageSize") Integer pageSize
             ,@ParamAsp("pageNum") Integer pageNum) {
         PageBean<Coupon> pageBean = new PageBean<>(pageNum,pageSize);
-        pageBean.setList(couponMapper.selectByPage(coupon, pageSize, PageBean.getOffset(pageNum, pageSize)));
-        pageBean.setTotalCount(couponMapper.selectByPageCount(coupon));
+        CouponExample example = getExample(coupon, true);
+        pageBean.setList(couponMapper.selectByPage(example, PageBean.getOffset(pageNum, pageSize),pageSize));
+        pageBean.setTotalCount(couponMapper.countByExample(example));
         return pageBean;
     }
 
@@ -258,6 +231,43 @@ public class CouponServiceImpl implements CouponService {
     }
 
 /*--------------------------------------------------------------------------------------------------------------------*/
+
+    private CouponExample getExample(Coupon coupon,boolean orderFlag){
+        CouponExample example = new CouponExample();
+        if (orderFlag) {
+            example.setOrderByClause("create_time DESC");
+        }
+        if (coupon != null) {
+            CouponExample.Criteria criteria = example.createCriteria();
+            criteria.andDelFlagEqualTo(false);
+            if (coupon.getCommonState() != null) {
+                criteria.andCommonStateEqualTo(coupon.getCommonState());
+            }
+            if (coupon.getRepeatFlag() != null ) {
+                criteria.andRepeatFlagEqualTo(coupon.getRepeatFlag());
+            }
+            if (coupon.getInventoryFlag() != null) {
+                criteria.andInventoryFlagEqualTo(coupon.getInventoryFlag());
+            }
+            if (coupon.getFixType() != null) {
+                criteria.andFixTypeEqualTo(coupon.getFixType());
+            }
+            if (coupon.getType() != null) {
+                criteria.andTypeEqualTo(coupon.getType());
+            }
+            if (coupon.getOnLineFlag() != null) {
+                criteria.andOnLineFlagEqualTo(coupon.getOnLineFlag());
+            }
+            if (coupon.getHomeShow() != null) {
+                criteria.andHomeShowEqualTo(coupon.getHomeShow());
+            }
+            if (coupon.getApplicationType() != null) {
+                criteria.andApplicationTypeEqualTo(coupon.getApplicationType());
+            }
+        }
+        return example;
+    }
+
     /**追加数量到优惠券的库存
      * @param coupon
      * @return
