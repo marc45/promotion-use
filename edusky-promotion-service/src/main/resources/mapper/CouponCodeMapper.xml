@@ -90,21 +90,62 @@
       order by ${orderByClause}
     </if>
   </select>
-  <select id="selectByPage" parameterType="java.util.Map" resultMap="BaseResultMap">
-    select
-    <include refid="Base_Column_List" />
-    from t_coupon_code
-    <if test="_parameter != null">
-      <include refid="Update_By_Example_Where_Clause" />
-    </if>
-    <if test="example.orderByClause != null">
-      order by ${example.orderByClause}
-    </if>
-    LIMIT #{limit} OFFSET #{offset}
+  <select id="selectAndConditionByPage" parameterType="java.util.Map" resultMap="JoinCouponUserAndRestrictResultMap">
+      SELECT tcc.id, tcc.coupon_id, tcc.code, tcc.used_flag, tcc.export_flag, tcc.bind_type, tcc.bind_time
+              ,tcc.used_time, tcc.expiration_time,tcc.create_time, tcc.update_time
+              ,tc.`name` AS couponName,tc.face_value AS faceValue,tcu.user_open_id AS userOpenId
+              ,trc.id AS restrict_condition_id ,trc.type,trc.restrict_value,trc.description
+      FROM t_coupon_code tcc
+      LEFT JOIN t_coupon tc ON tc.id = tcc.coupon_id
+      LEFT JOIN t_coupon_user tcu ON tcu.coupon_code_id = tcc.id
+      LEFT JOIN t_restrict_condition trc ON trc.coupon_id = tcc.coupon_id
+      WHERE 1 = 1
+      <if test="record.couponId != null">
+        AND tcc.coupon_id = #{record.couponId,jdbcType=BIGINT}
+      </if>
+      <if test="record.code != null">
+        AND tcc.code = #{record.code,jdbcType=VARCHAR}
+      </if>
+      <if test="record.usedFlag != null or record.usedFlag == 0">
+        AND tccused_flag = .#{record.usedFlag,jdbcType=TINYINT}
+      </if>
+      <if test="record.exportFlag != null or record.exportFlag == 0">
+        AND tcc.exportflag = #{record.exportFlag,jdbcType=BIT}
+      </if>
+      <if test="record.bindType != null or record.bindType == 0">
+        AND tcc.bind_type = #{record.bindType,jdbcType=TINYINT}
+      </if>
+      ORDER BY tcc.expiration_time DESC
+      LIMIT #{limit} OFFSET #{offset}
   </select>
+    <select id="selectAndConditionByPageCount" parameterType="java.util.Map" resultType="java.lang.Long">
+        SELECT COUNT(tcc.id)
+        FROM t_coupon_code tcc
+        LEFT JOIN t_coupon tc ON tc.id = tcc.coupon_id
+        LEFT JOIN t_coupon_user tcu ON tcu.coupon_code_id = tcc.id
+        LEFT JOIN t_restrict_condition trc ON trc.coupon_id = tcc.coupon_id
+        WHERE 1 = 1
+        <if test="record.couponId != null">
+            AND tcc.coupon_id = #{record.couponId,jdbcType=BIGINT}
+        </if>
+        <if test="record.code != null">
+            AND tcc.code = #{record.code,jdbcType=VARCHAR}
+        </if>
+        <if test="record.usedFlag != null or record.usedFlag == 0">
+            AND tccused_flag = .#{record.usedFlag,jdbcType=TINYINT}
+        </if>
+        <if test="record.exportFlag != null or record.exportFlag == 0">
+            AND tcc.exportflag = #{record.exportFlag,jdbcType=BIT}
+        </if>
+        <if test="record.bindType != null or record.bindType == 0">
+            AND tcc.bind_type = #{record.bindType,jdbcType=TINYINT}
+        </if>
+    </select>
   <resultMap id="JoinCouponUserAndRestrictResultMap" type="com.edu.sky.promotion.po.entity.CouponCode" extends="BaseResultMap">
     <result column="couponName" property="couponName"/>
     <result column="couponApplicationType" property="couponApplicationType"/>
+      <result column="userOpenId" property="openId"/>
+      <result column="faceValue" property="faceValue"/>
     <collection property="restrictConditions" ofType="com.edu.sky.promotion.po.entity.RestrictCondition">
       <result column="restrict_condition_id" property="id"/>
       <result column="type" property="type"/>

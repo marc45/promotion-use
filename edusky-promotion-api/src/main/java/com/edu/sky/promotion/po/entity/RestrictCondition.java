@@ -109,4 +109,5 @@ public class RestrictCondition implements Serializable {
     public void setCouponId(Long couponId) {
         this.couponId = couponId;
     }
+
 }

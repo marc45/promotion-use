@@ -43,13 +43,6 @@ public interface CouponMapper extends BaseMapper<Coupon, CouponExample, Long> {
      */
     List<Coupon> selectByIdList(List<Long> couponIds);
 
-    /**根据优惠码code或者id查询优惠券信息
-     * @param code
-     * @param couponCodeId
-     * @return
-     */
-    Coupon selectJoinByCodeOrCouponCodeId(String code, Long couponCodeId);
-
     /**根据couponId查询coupon信息：包含库存和限制条件等
      * @param couponId
      * @return

@@ -54,9 +54,8 @@ public class CouponCodeServiceImpl implements CouponCodeService {
     public Object couponCodePage(@ParamAsp("couponCode") CouponCode couponCode,@ParamAsp("pageSize") Integer pageSize
             ,@ParamAsp("pageNum") Integer pageNum) {
         PageBean<CouponCode> pageBean = new PageBean(pageNum,pageSize);
-        CouponCodeExample example = getExam(couponCode,true);
-        pageBean.setList(couponCodeMapper.selectByPage(example, PageBean.getOffset(pageNum, pageSize), pageSize));
-        pageBean.setTotalCount(couponCodeMapper.countByExample(example));
+        pageBean.setList(couponCodeMapper.selectAndConditionByPage(couponCode, pageSize, PageBean.getOffset(pageNum, pageSize)));
+        pageBean.setTotalCount(couponCodeMapper.selectAndConditionByPageCount(couponCode));
         return pageBean;
     }
 
@@ -155,7 +154,7 @@ public class CouponCodeServiceImpl implements CouponCodeService {
         Long couponId = couponCode.getCouponId();
         Coupon coupon = couponMapper.selectById(couponId);
         if (coupon == null) {
-            return 100;//优惠券不存在
+            return 100;//优惠券不存在或者已下线
         }
         if (!coupon.getRepeatFlag()) {
             long repeat = couponCodeMapper.selectByJoinCount(openId, couponId, null);

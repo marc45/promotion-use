@@ -17,6 +17,7 @@ import com.edu.sky.promotion.service.CouponService;
 import com.edu.sky.promotion.util.DateUtils;
 import com.edu.sky.promotion.util.PageBean;
 import com.edu.sky.promotion.util.RandomCodeUtils;
+import org.mybatis.spring.SqlSessionTemplate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -49,13 +50,21 @@ public class CouponServiceImpl implements CouponService {
         coupon.setUpdateTime(new Date());
         coupon.setCommonState((byte) 0);
         Date expirationTime = null;
+        if (coupon.getType().byteValue() == 4 || coupon.getType().byteValue() == 5) {
+
+        }
         //时间范围类型(0固定日期范围,1固定时间范围,2固定天数)
-        if (coupon.getFixType() == 0) {
+        if (coupon.getFixType().byteValue() == 0) {
             coupon.setStartTime(DateUtils.getDayStart(coupon.getStartTime()));
             expirationTime = DateUtils.getDayEndString(coupon.getEndTime());
             coupon.setEndTime(expirationTime);
-        } else if (coupon.getFixType() == 1) {
+            coupon.setExpireDay(null);
+        } else if (coupon.getFixType().byteValue() == 1) {
             expirationTime = coupon.getEndTime();
+            coupon.setExpireDay(null);
+        } else if(coupon.getFixType().byteValue() == 2){
+            coupon.setStartTime(null);
+            coupon.setEndTime(null);
         }
         boolean flag = couponMapper.insertSelective(coupon) == 1;
         if (!flag) {
@@ -65,17 +74,24 @@ public class CouponServiceImpl implements CouponService {
         Inventory inventory = new Inventory();
         inventory.setCouponId(id);
         inventory.setCreateTime(new Date());
-        if (coupon.getInventoryFlag() == null || coupon.getInventoryFlag()) {
+        if (coupon.getInventoryFlag()) {
             inventory.setTotalAmount(coupon.getAmount());
         }
-        int res1 = inventoryMapper.insertSelective(inventory);
-        List<RestrictCondition> restrictConditions = coupon.getRestrictConditions();
-        restrictConditions.forEach(cond -> {
-            cond.setCouponId(id);
-        });
-        int res3 = restrictConditionMapper.insertList(restrictConditions);
-        if (res3 != restrictConditions.size()) {
-            throw new RuntimeException("优惠码增加限制条件失败!");
+        if (inventoryMapper.insertSelective(inventory) != 1) {
+            throw new RuntimeException("优惠码增加库存失败!");
+        }
+        if (coupon.getRestrictFlag()) {
+            int res1 = inventoryMapper.insertSelective(inventory);
+            List<RestrictCondition> restrictConditions = coupon.getRestrictConditions();
+            restrictConditions.forEach(cond -> {
+                cond.setCouponId(id);
+                cond.setCreateTime(new Date());
+                cond.setUpdateTime(new Date());
+            });
+            int res3 = restrictConditionMapper.insertList(restrictConditions);
+            if (res3 != restrictConditions.size()) {
+                throw new RuntimeException("优惠码增加限制条件失败!");
+            }
         }
         List<CouponCode> couponCodes = new ArrayList<>();
         for (int i = 0; i < coupon.getAmount(); i++) {
@@ -86,6 +102,7 @@ public class CouponServiceImpl implements CouponService {
             couponCode.setCreateTime(new Date());
             couponCode.setUpdateTime(new Date());
             couponCode.setUsedFlag((byte) 0);
+            couponCode.setBindType((byte)0);
             couponCode.setCode(RandomCodeUtils.getCouponCode());
             couponCodes.add(couponCode);
         }
@@ -107,6 +124,11 @@ public class CouponServiceImpl implements CouponService {
         return couponMapper.selectByIdJoinInventoryAndConditions(couponId);
     }
 
+    /**只能追加数量和延长时间,修改个人是否能够重复领取;
+     * 追加逻辑（暂定）：
+     *      1：追加优惠券数量：更新有限库存数量；批量增加追加的优惠码
+     *      2：延长优惠码过期时间：更新该优惠券下所有以产生优惠码的过期时间：根据fixType类型判断修改字段，修改没有使用的优惠码
+     */
     @Override//只能追加数量和延长时间,修改个人是否能够重复领取
     @Transactional
     public Object updateAddToCoupon(@ParamAsp("coupon") Coupon coupon) {
@@ -118,17 +140,17 @@ public class CouponServiceImpl implements CouponService {
         if (coupon1.getCommonState().byteValue() != 2) {
             return 106;//追加前请先把优惠券下架
         }
-        //数量追加
-        if (coupon.getAmount() != null && coupon.getAmount() > 0 ) {
+        //库存数量追加
+        if (!coupon1.getInventoryFlag()) {
+            return 107;//此为无限库存优惠券不支持库存修改
+        }
+        if (coupon.getAmount() != null) {
             coupon1.setAmount(coupon1.getAmount() + coupon.getAmount());
         }
-        //个人是否能够重复领取 更改
-        if (coupon.getRepeatFlag() != null) {
-            coupon1.setRepeatFlag(coupon.getRepeatFlag());
-        }
+
         //时间更改
         Date expirationTime = null;
-        if (coupon.getFixType() == 0) {
+        if (coupon.getFixType().byteValue() == 0) {
             if (coupon.getStartTime() != null) {
                 coupon1.setStartTime(DateUtils.getDayStart(coupon.getStartTime()));
             }
@@ -136,7 +158,7 @@ public class CouponServiceImpl implements CouponService {
                 expirationTime = DateUtils.getDayEndString(coupon.getEndTime());
                 coupon1.setEndTime(expirationTime);
             }
-        } else if (coupon.getFixType() == 1) {
+        } else if (coupon.getFixType().byteValue() == 1) {
             if (coupon.getStartTime() != null) {
                 coupon1.setStartTime(coupon.getStartTime());
             }
@@ -144,7 +166,7 @@ public class CouponServiceImpl implements CouponService {
                 expirationTime = coupon.getEndTime();
                 coupon1.setEndTime(expirationTime);
             }
-        } else if (coupon.getFixType() == 2) {
+        } else if (coupon.getFixType().byteValue() == 2) {
             if (coupon.getExpireDay() != null && coupon.getExpireDay() > 0) {
                 coupon1.setExpireDay(coupon.getExpireDay());
             }
@@ -196,7 +218,7 @@ public class CouponServiceImpl implements CouponService {
         return couponMapper.updateByExampleSelective(coupon, example) == 1;
     }
 
-    @Override
+    @Override//供客户端使用：查询界面显示的优惠券列表等
     public List<Coupon> couponList(@ParamAsp("coupon") Coupon coupon) {
         CouponExample example  = getExample(coupon,true);
         return couponMapper.selectByExample(example);
@@ -210,14 +232,6 @@ public class CouponServiceImpl implements CouponService {
         pageBean.setList(couponMapper.selectByPage(example, PageBean.getOffset(pageNum, pageSize),pageSize));
         pageBean.setTotalCount(couponMapper.countByExample(example));
         return pageBean;
-    }
-
-    @Override
-    public Coupon findCouponByCodeOrCouponCode(@ParamAsp("code") String code,@ParamAsp("couponCodeId") Long couponCodeId) {
-        if (code == null && couponCodeId == null) {
-            return null;
-        }
-        return couponMapper.selectJoinByCodeOrCouponCodeId(code,couponCodeId);
     }
 
     @Override

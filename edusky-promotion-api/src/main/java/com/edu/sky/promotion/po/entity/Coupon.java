@@ -32,7 +32,7 @@ public class Coupon implements Serializable {
      * 表字段 : t_coupon.face_value
      * 
      */
-    private Double faceValue;
+    private Integer faceValue;
 
     /**
      * 是否有库存0否，1是
@@ -167,11 +167,11 @@ public class Coupon implements Serializable {
         this.type = type;
     }
 
-    public Double getFaceValue() {
+    public Integer getFaceValue() {
         return faceValue;
     }
 
-    public void setFaceValue(Double faceValue) {
+    public void setFaceValue(Integer faceValue) {
         this.faceValue = faceValue;
     }
 
@@ -318,4 +318,5 @@ public class Coupon implements Serializable {
     public void setInventory(Inventory inventory) {
         this.inventory = inventory;
     }
+
 }

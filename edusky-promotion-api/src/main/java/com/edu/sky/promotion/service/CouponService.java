@@ -56,13 +56,6 @@ public interface CouponService {
      */
     Object couponPage(Coupon coupon, Integer pageSize, Integer pageNum);
 
-    /**根据优惠码code或者id查询coupon
-     * @param code 优惠码code；可选，不选则写null
-     * @param couponCodeId 优惠码id；可选，不选则写null
-     * @return
-     */
-    Coupon findCouponByCodeOrCouponCode(String code,Long couponCodeId);
-
     /**查找界面显示的优惠券列表：界面显示优惠券必须无库存，线上，已上架，
      * @return
      */

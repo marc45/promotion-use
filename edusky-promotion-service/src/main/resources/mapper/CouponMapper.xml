@@ -5,7 +5,7 @@
     <result column="id" jdbcType="BIGINT" property="id" />
     <result column="name" jdbcType="VARCHAR" property="name" />
     <result column="type" jdbcType="TINYINT" property="type" />
-    <result column="face_value" jdbcType="DOUBLE" property="faceValue" />
+    <result column="face_value" jdbcType="INTEGER" property="faceValue" />
     <result column="inventory_flag" jdbcType="BIT" property="inventoryFlag" />
     <result column="restrict_flag" jdbcType="BIT" property="restrictFlag" />
     <result column="repeat_flag" jdbcType="BIT" property="repeatFlag" />
@@ -126,6 +126,9 @@
       <if test="restrictFlag != null">
         restrict_flag,
       </if>
+        <if test="repeatFlag != null">
+            repeat_flag,
+        </if>
       <if test="applicationType != null">
         application_type,
       </if>
@@ -174,7 +177,7 @@
         #{type,jdbcType=TINYINT},
       </if>
       <if test="faceValue != null">
-        #{faceValue,jdbcType=DOUBLE},
+        #{faceValue,jdbcType=INTEGER},
       </if>
       <if test="inventoryFlag != null">
         #{inventoryFlag,jdbcType=BIT},
@@ -182,6 +185,9 @@
       <if test="restrictFlag != null">
         #{restrictFlag,jdbcType=BIT},
       </if>
+        <if test="repeatFlag != null">
+            #{repeatFlag,jdbcType=BIT},
+        </if>
       <if test="applicationType != null">
         #{applicationType,jdbcType=TINYINT},
       </if>
@@ -239,7 +245,7 @@
         type = #{record.type,jdbcType=TINYINT},
       </if>
       <if test="record.faceValue != null">
-        face_value = #{record.faceValue,jdbcType=DOUBLE},
+        face_value = #{record.faceValue,jdbcType=INTEGER},
       </if>
       <if test="record.inventoryFlag != null">
         inventory_flag = #{record.inventoryFlag,jdbcType=BIT},
@@ -292,7 +298,7 @@
   <select id="selectById" parameterType="java.lang.Long" resultMap="BaseResultMap">
     SELECT
     <include refid="Base_Column_List"/>
-    FROM t_coupon WHERE id = #{id}
+    FROM t_coupon WHERE del_flag = 0 AND common_state = 1 AND id = #{id}
   </select>
 
   <select id="selectByPage" parameterType="map" resultMap="BaseResultMap">
@@ -327,18 +333,6 @@
             #{item}
         </foreach>
     </select>
-    <select id="selectJoinByCodeOrCouponCodeId" parameterType="java.util.Map" resultMap="BaseResultMap">
-        SELECT <include refid="Base_Column_List" />
-        FROM t_coupon tc
-        INNER JOIN t_coupon_code tcc ON tcc.coupon_id = tc.id
-        WHERE 1 = 1 AND tc.common_state = 1
-            <if test="code != null and code != '' ">
-               AND tcc.`code` = #{code}
-            </if>
-            <if test="couponCodeId != null and couponCodeId != '' ">
-                AND tcc.id = #{couponCodeId}
-            </if>
-    </select>
     <resultMap id="CouponJoinInventoryAndConditionsResultMap" type="com.edu.sky.promotion.po.entity.Coupon" extends="BaseResultMap">
         <association property="inventory" javaType="com.edu.sky.promotion.po.entity.Inventory">
             <result column="tinvid" property="id"/>
@@ -354,7 +348,7 @@
         </collection>
     </resultMap>
     <select id="selectByIdJoinInventoryAndConditions" parameterType="java.lang.Long" resultMap="CouponJoinInventoryAndConditionsResultMap">
-        SELECT tc.id,tc.`name`,tc.`type`,tc.face_value,tc.inventory_flag,tc.fix_type
+        SELECT tc.id,tc.`name`,tc.`type`,tc.face_value,tc.inventory_flag,tc.restrict_flag,tc.fix_type
                 ,tc.start_time,tc.end_time,tc.expire_day,tc.description,tc.common_state
                 ,tc.on_line_flag,tc.repeat_flag,tc.home_show,tc.create_time,tc.update_time
                 ,tinv.id AS tinvid ,tinv.total_amount,tinv.used_count,tinv.bind_count

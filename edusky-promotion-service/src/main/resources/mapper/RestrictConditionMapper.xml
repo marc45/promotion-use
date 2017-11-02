@@ -191,7 +191,7 @@
       values
       <foreach collection="list" item="item" separator=",">
           (#{item.id,jdbcType=BIGINT}, #{item.couponId,jdbcType=BIGINT}, #{item.description,jdbcType=VARCHAR},
-          #{item.type,jdbcType=TINYINT}, #{item.restrict_value,jdbcType=INTEGER},#{item.createTime,jdbcType=TIMESTAMP},
+          #{item.type,jdbcType=TINYINT}, #{item.restrictValue,jdbcType=INTEGER},#{item.createTime,jdbcType=TIMESTAMP},
           #{item.updateTime,jdbcType=TIMESTAMP})
       </foreach>
   </insert>

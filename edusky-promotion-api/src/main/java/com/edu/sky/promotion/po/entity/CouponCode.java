@@ -83,6 +83,7 @@ public class CouponCode implements Serializable {
      * 
      */
     private Date updateTime;
+    private Double faceValue;
 
     private String openId;//用户code
     private Byte couponApplicationType;//使用类型
@@ -206,5 +207,13 @@ public class CouponCode implements Serializable {
 
     public void setCouponApplicationType(Byte couponApplicationType) {
         this.couponApplicationType = couponApplicationType;
+    }
+
+    public Double getFaceValue() {
+        return faceValue;
+    }
+
+    public void setFaceValue(Double faceValue) {
+        this.faceValue = faceValue;
     }
 }

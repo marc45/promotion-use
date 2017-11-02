@@ -5,7 +5,7 @@ import java.util.List;
 
 public class PageBean<T> implements Serializable{
 	
-	private int currentPage;
+	private int pageNo;
 	
 	private int pageSize;
 
@@ -16,7 +16,7 @@ public class PageBean<T> implements Serializable{
     public PageBean(){
     }
     public PageBean(int cp,int pz){
-        this.currentPage = cp == 0 ? 1 : cp;
+        this.pageNo = cp == 0 ? 1 : cp;
         this.pageSize = pz == 0 ? 10 : pz;
     }
 
@@ -25,7 +25,7 @@ public class PageBean<T> implements Serializable{
     }
 
     public int getCp() {
-        return currentPage;
+        return pageNo;
     }
 
     public int getPz() {
