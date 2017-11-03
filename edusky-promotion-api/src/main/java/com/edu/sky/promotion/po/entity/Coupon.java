@@ -143,6 +143,8 @@ public class Coupon implements Serializable {
     private Inventory inventory;//库存信息
     private List<RestrictCondition> restrictConditions;//优惠券使用条件集合
 
+    private Integer changeType;//1追加数量，2更改过期时间
+
     public Long getId() {
         return id;
     }
@@ -319,4 +321,11 @@ public class Coupon implements Serializable {
         this.inventory = inventory;
     }
 
+    public Integer getChangeType() {
+        return changeType;
+    }
+
+    public void setChangeType(Integer changeType) {
+        this.changeType = changeType;
+    }
 }

@@ -51,4 +51,10 @@ public interface CouponCodeMapper extends BaseMapper<CouponCode, CouponCodeExamp
      */
     List<CouponCode> selectConditionByOpenId(@Param("openId") String openId);
 
+    /**批量修改
+     * @param couponId
+     * @return
+     */
+    long updateListExpirationTime(@Param("couponId") Long couponId,@Param("expireDay") Integer expireDay);
+
 }

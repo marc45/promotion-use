@@ -17,12 +17,6 @@ public interface CouponMapper extends BaseMapper<Coupon, CouponExample, Long> {
      */
     Coupon selectById(Long id);
 
-    /**追加更新优惠券：只能更新时间和追加数量
-     * @param coupon
-     * @return
-     */
-    int addToUpdateCoupon(Coupon coupon);
-
     /**分页查询
      * @param coupon 查询实体
      * @param limit

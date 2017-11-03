@@ -372,4 +372,12 @@
       AND tc.del_flag = 0
       AND tcu.user_open_id = #{openId}
   </select>
+    <update id="updateListExpirationTime" parameterType="java.util.Map" >
+        UPDATE t_coupon_code
+        SET expiration_time = CASE
+        WHEN ISNULL(expiration_time) THEN NULL
+        ELSE DATE_ADD(expiration_time,INTERVAL #{expireDay} DAY)
+        END
+        WHERE coupon_id = #{couponId}
+    </update>
 </mapper>

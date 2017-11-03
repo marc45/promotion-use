@@ -4,13 +4,10 @@ import com.edu.sky.promotion.po.entity.CouponCode;
 
 import java.util.List;
 
+/**
+ * 优惠券兑换码service
+ */
 public interface CouponCodeService {
-
-    /**查询列表：根据条件查询
-     * @param couponCode 优惠码查询类
-     * @return
-     */
-    List<CouponCode> couponCodeList(CouponCode couponCode);
 
     /**查询分页列表：根据couponCode各种条件查询
      * @param couponCode 优惠码查询类

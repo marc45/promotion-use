@@ -23,6 +23,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -49,11 +50,15 @@ public class CouponServiceImpl implements CouponService {
         coupon.setCreateTime(new Date());
         coupon.setUpdateTime(new Date());
         coupon.setCommonState((byte) 0);
-        Date expirationTime = null;
         if (coupon.getType().byteValue() == 4 || coupon.getType().byteValue() == 5) {
-
+            coupon.setInventoryFlag(false);
+            coupon.setFixType((byte)2);
+            coupon.setOnLineFlag((byte)1);
+            coupon.setHomeShow(false);
+            coupon.setRepeatFlag(coupon.getFixType().byteValue() == 5 ? true : false);
         }
         //时间范围类型(0固定日期范围,1固定时间范围,2固定天数)
+        Date expirationTime = null;
         if (coupon.getFixType().byteValue() == 0) {
             coupon.setStartTime(DateUtils.getDayStart(coupon.getStartTime()));
             expirationTime = DateUtils.getDayEndString(coupon.getEndTime());
@@ -68,7 +73,7 @@ public class CouponServiceImpl implements CouponService {
         }
         boolean flag = couponMapper.insertSelective(coupon) == 1;
         if (!flag) {
-            return flag;
+            return false;
         }
         Long id = coupon.getId();
         Inventory inventory = new Inventory();
@@ -130,74 +135,39 @@ public class CouponServiceImpl implements CouponService {
      *      2：延长优惠码过期时间：更新该优惠券下所有以产生优惠码的过期时间：根据fixType类型判断修改字段，修改没有使用的优惠码
      */
     @Override//只能追加数量和延长时间,修改个人是否能够重复领取
-    @Transactional
-    public Object updateAddToCoupon(@ParamAsp("coupon") Coupon coupon) {
+    @Transactional(rollbackFor = Exception.class)
+    public Object updateAddToCoupon(@ParamAsp("coupon") Coupon coupon,@ParamAsp("changeType") Integer changeType) {
         boolean flag = false;
-        Coupon coupon1 = couponMapper.selectById(coupon.getId());
-        if (coupon1 == null && coupon1.getId() == null) {
-            return flag;
+        CouponExample example = new CouponExample();
+        CouponExample.Criteria criteria = example.createCriteria();
+        criteria.andIdEqualTo(coupon.getId()).andDelFlagEqualTo(false);
+        List<Coupon> couponList = couponMapper.selectByExample(example);
+        if (couponList == null || couponList.isEmpty()) {
+            return "此优惠券无效!";
         }
-        if (coupon1.getCommonState().byteValue() != 2) {
-            return 106;//追加前请先把优惠券下架
+        Coupon coupon1 = couponList.get(0);
+        if (coupon1.getCommonState().byteValue() == 1) {
+            return "追加前请先把优惠券下架!";
         }
-        //库存数量追加
-        if (!coupon1.getInventoryFlag()) {
-            return 107;//此为无限库存优惠券不支持库存修改
+        //优惠券数量追加
+        if (changeType.intValue() == 1) {
+            if (!coupon1.getInventoryFlag()) {
+                return "此为无限库存优惠券不支持库存修改!";
+            }
+            if (coupon.getAmount() == null || coupon.getAmount() <= 0) {
+                return "追加数量不能为空或者小于等于0!";
+            }
+            return addToAmount(coupon1,coupon.getAmount());
         }
-        if (coupon.getAmount() != null) {
-            coupon1.setAmount(coupon1.getAmount() + coupon.getAmount());
-        }
-
-        //时间更改
-        Date expirationTime = null;
-        if (coupon.getFixType().byteValue() == 0) {
-            if (coupon.getStartTime() != null) {
-                coupon1.setStartTime(DateUtils.getDayStart(coupon.getStartTime()));
+        //优惠券时间更改
+        if (changeType.intValue() == 2) {
+            if (coupon.getFixType() == null) {
+                return "时间类型不能为空";
             }
-            if (coupon.getEndTime() != null) {
-                expirationTime = DateUtils.getDayEndString(coupon.getEndTime());
-                coupon1.setEndTime(expirationTime);
+            if (coupon1.getFixType().byteValue() != coupon.getFixType().byteValue()) {
+                return "原优惠券时间类型和输入时间类型不匹配！";
             }
-        } else if (coupon.getFixType().byteValue() == 1) {
-            if (coupon.getStartTime() != null) {
-                coupon1.setStartTime(coupon.getStartTime());
-            }
-            if (coupon.getEndTime() != null) {
-                expirationTime = coupon.getEndTime();
-                coupon1.setEndTime(expirationTime);
-            }
-        } else if (coupon.getFixType().byteValue() == 2) {
-            if (coupon.getExpireDay() != null && coupon.getExpireDay() > 0) {
-                coupon1.setExpireDay(coupon.getExpireDay());
-            }
-        }
-        coupon.setUpdateTime(new Date());
-        flag = couponMapper.addToUpdateCoupon(coupon1) == 1;
-        if (flag) {
-            //追加优惠券库存表总库存数量
-            flag = addtoAmountInventory(coupon);
-            if (!flag) {
-                for (int i = 0; i < 2; i++) {
-                    flag = addtoAmountInventory(coupon);
-                    if (flag) {
-                        break;
-                    }
-                }
-            }
-        }
-        if (flag) {
-            //更新该优惠券生成的部分优惠码的到期时间
-            CouponCode couponCode = new CouponCode();
-            if (expirationTime != null) {
-                couponCode.setExpirationTime(expirationTime);
-            }
-            CouponCodeExample example = new CouponCodeExample();
-            CouponCodeExample.Criteria criteria = example.createCriteria();
-            criteria.andCouponIdEqualTo(coupon1.getId());
-            flag = couponCodeMapper.updateByExampleSelective(couponCode, example) > 0;
-        }
-        if (!flag) {
-            throw new RuntimeException("优惠券追加失败!");
+            return addToTime(coupon1, coupon);
         }
         return flag;
     }
@@ -218,12 +188,6 @@ public class CouponServiceImpl implements CouponService {
         return couponMapper.updateByExampleSelective(coupon, example) == 1;
     }
 
-    @Override//供客户端使用：查询界面显示的优惠券列表等
-    public List<Coupon> couponList(@ParamAsp("coupon") Coupon coupon) {
-        CouponExample example  = getExample(coupon,true);
-        return couponMapper.selectByExample(example);
-    }
-
     @Override
     public Object couponPage(@ParamAsp("coupon") Coupon coupon,@ParamAsp("pageSize") Integer pageSize
             ,@ParamAsp("pageNum") Integer pageNum) {
@@ -239,7 +203,7 @@ public class CouponServiceImpl implements CouponService {
         CouponExample example = new CouponExample();
         CouponExample.Criteria criteria = example.createCriteria();
         criteria.andDelFlagEqualTo(false).andCommonStateEqualTo((byte) 1)
-                .andInventoryFlagEqualTo(false).andOnLineFlagEqualTo((byte) 1)
+                .andOnLineFlagEqualTo((byte) 1)
                 .andHomeShowEqualTo(true);
         return couponMapper.selectByExample(example);
     }
@@ -293,9 +257,109 @@ public class CouponServiceImpl implements CouponService {
         InventoryExample.Criteria criteria = example.createCriteria();
         criteria.andIdEqualTo(inventory.getId()).andVersionEqualTo(version);
         Inventory inventory1 = new Inventory();
-        inventory.setTotalAmount(inventory.getTotalAmount() + coupon.getAmount());
-        inventory.setVersion(version + 1);
+        inventory1.setTotalAmount(inventory.getTotalAmount() + coupon.getAmount());
+        inventory1.setVersion(version + 1);
         return inventoryMapper.updateByExampleSelective(inventory1, example) == 1;
+    }
+
+    /**优惠券追加数量
+     * @param coupon1
+     * @param amount
+     * @return
+     */
+    private boolean addToAmount(Coupon coupon1,Long amount){
+        boolean flag = false;
+        //时间范围类型(0固定日期范围,1固定时间范围,2固定天数)
+        List<CouponCode> couponCodes = new ArrayList<>();
+        for (int i = 0; i < amount; i++) {
+            CouponCode couponCode = new CouponCode();
+            couponCode.setCouponId(coupon1.getId());
+            couponCode.setExportFlag(false);
+            couponCode.setExpirationTime(coupon1.getEndTime());
+            couponCode.setCreateTime(new Date());
+            couponCode.setUpdateTime(new Date());
+            couponCode.setUsedFlag((byte) 0);
+            couponCode.setBindType((byte)0);
+            couponCode.setCode(RandomCodeUtils.getCouponCode());
+            couponCodes.add(couponCode);
+        }
+        if (!couponCodes.isEmpty()) {
+            int res2 = couponCodeMapper.insertList(couponCodes);
+            if (res2 == couponCodes.size()) {
+                flag = true;
+            } else {
+                throw new RuntimeException("批量优惠码增加数据失败！");
+            }
+
+        }
+        if (flag) {
+            //追加优惠券库存表总库存数量
+            Coupon coupon = new Coupon();
+            coupon.setId(coupon1.getId());
+            coupon.setAmount(amount);
+            flag = addtoAmountInventory(coupon);
+            if (!flag) {
+                for (int i = 0; i < 2; i++) {
+                    flag = addtoAmountInventory(coupon);
+                    if (flag) {
+                        break;
+                    }
+                }
+            }
+        }
+        return flag;
+    }
+
+    /**优惠券修改过期时间
+     * @param coupon1
+     * @param coupon
+     * @return
+     */
+    private boolean addToTime(Coupon coupon1,Coupon coupon){
+        boolean flag = false;
+        Date expirationTime = null;
+        if (coupon.getFixType().byteValue() == 0) {
+            if (coupon.getStartTime() != null) {
+                coupon1.setStartTime(DateUtils.getDayStart(coupon.getStartTime()));
+            }
+            if (coupon.getEndTime() != null) {
+                expirationTime = DateUtils.getDayEndString(coupon.getEndTime());
+                coupon1.setEndTime(expirationTime);
+            }
+        } else if (coupon.getFixType().byteValue() == 1) {
+            if (coupon.getStartTime() != null) {
+                coupon1.setStartTime(coupon.getStartTime());
+            }
+            if (coupon.getEndTime() != null) {
+                expirationTime = coupon.getEndTime();
+                coupon1.setEndTime(expirationTime);
+            }
+        } else if (coupon.getFixType().byteValue() == 2) {
+            if (coupon.getExpireDay() != null && coupon.getExpireDay() > 0) {
+                Integer expireDay = coupon1.getExpireDay() + coupon.getExpireDay();
+                coupon1.setExpireDay(expireDay.shortValue());
+            }
+        }
+        coupon1.setUpdateTime(new Date());
+        CouponExample example1 = new CouponExample();
+        CouponExample.Criteria criteria1 = example1.createCriteria();
+        criteria1.andIdEqualTo(coupon1.getId());
+        flag = couponMapper.updateByExampleSelective(coupon1,example1) == 1;
+        if (flag) {
+            //更新该优惠券生成的部分优惠码的到期时间
+            if (expirationTime != null) {
+                CouponCode couponCode = new CouponCode();
+                CouponCodeExample example = new CouponCodeExample();
+                CouponCodeExample.Criteria criteria = example.createCriteria();
+                criteria.andCouponIdEqualTo(coupon1.getId());
+                couponCode.setExpirationTime(expirationTime);
+                flag = couponCodeMapper.updateByExampleSelective(couponCode, example) > 0;
+            }
+            if (coupon1.getExpireDay() != null) {
+                couponCodeMapper.updateListExpirationTime(coupon.getId(),coupon.getExpireDay().intValue());
+            }
+        }
+        return flag;
     }
 
 }

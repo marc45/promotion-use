@@ -45,12 +45,6 @@ public class CouponCodeServiceImpl implements CouponCodeService {
     private WaresService waresService;
 
     @Override
-    public List<CouponCode> couponCodeList(@ParamAsp("couponCode") CouponCode couponCode) {
-        CouponCodeExample example = getExam(couponCode,true);
-        return couponCodeMapper.selectByExample(example);
-    }
-
-    @Override
     public Object couponCodePage(@ParamAsp("couponCode") CouponCode couponCode,@ParamAsp("pageSize") Integer pageSize
             ,@ParamAsp("pageNum") Integer pageNum) {
         PageBean<CouponCode> pageBean = new PageBean(pageNum,pageSize);
