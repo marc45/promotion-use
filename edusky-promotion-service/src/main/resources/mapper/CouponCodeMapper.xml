@@ -222,7 +222,7 @@
       #{item.createTime,jdbcType=TIMESTAMP}, #{item.updateTime,jdbcType=TIMESTAMP})
     </foreach>
   </insert>
-  <insert id="insertSelective" parameterType="com.edu.sky.promotion.po.entity.CouponCode">
+  <insert id="insertSelective" parameterType="com.edu.sky.promotion.po.entity.CouponCode" useGeneratedKeys="true" keyProperty="id">
     insert into t_coupon_code
     <trim prefix="(" suffix=")" suffixOverrides=",">
       <if test="id != null">

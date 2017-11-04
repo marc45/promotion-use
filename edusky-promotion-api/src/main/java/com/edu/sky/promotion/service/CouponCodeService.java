@@ -63,5 +63,17 @@ public interface CouponCodeService {
      */
     Object findCouponListByWaresId(List<Long> waresIds,Integer waresPrice,String openId);
 
+    /**新人注册赠送优惠券
+     * @param openId
+     * @return
+     */
+    Object registerToGiveAwayCoupon(String openId);
+
+    /**登录送优惠券
+     * @param openId
+     * @return
+     */
+    Object signInToGiveAwayCoupons(String openId);
+
 
 }

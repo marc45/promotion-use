@@ -2,14 +2,8 @@ package com.edu.sky.promotion.service.impl;
 
 import com.alibaba.dubbo.config.annotation.Service;
 import com.edu.sky.promotion.aop.ParamAsp;
-import com.edu.sky.promotion.po.dao.CouponCodeMapper;
-import com.edu.sky.promotion.po.dao.CouponMapper;
-import com.edu.sky.promotion.po.dao.InventoryMapper;
-import com.edu.sky.promotion.po.dao.RestrictConditionMapper;
-import com.edu.sky.promotion.po.entity.Coupon;
-import com.edu.sky.promotion.po.entity.CouponCode;
-import com.edu.sky.promotion.po.entity.Inventory;
-import com.edu.sky.promotion.po.entity.RestrictCondition;
+import com.edu.sky.promotion.po.dao.*;
+import com.edu.sky.promotion.po.entity.*;
 import com.edu.sky.promotion.po.example.CouponCodeExample;
 import com.edu.sky.promotion.po.example.CouponExample;
 import com.edu.sky.promotion.po.example.InventoryExample;
@@ -21,6 +15,7 @@ import org.mybatis.spring.SqlSessionTemplate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.lang.reflect.Type;
@@ -246,18 +241,24 @@ public class CouponServiceImpl implements CouponService {
         return example;
     }
 
-    /**追加数量到优惠券的库存
+    /**更改优惠券信息：追加数量，或 调整绑定数量
      * @param coupon
+     * @param bindOrAmount 0绑定数量加一，1使用数量加一
      * @return
      */
-    private boolean addtoAmountInventory(Coupon coupon){
+    private boolean addtoAmountInventory(Coupon coupon,int bindOrAmount){
         Inventory inventory = inventoryMapper.selectByCouponId(coupon.getId());
         Long version = inventory.getVersion();
         InventoryExample example = new InventoryExample();
         InventoryExample.Criteria criteria = example.createCriteria();
         criteria.andIdEqualTo(inventory.getId()).andVersionEqualTo(version);
         Inventory inventory1 = new Inventory();
-        inventory1.setTotalAmount(inventory.getTotalAmount() + coupon.getAmount());
+        if (bindOrAmount == 1) {
+            inventory1.setTotalAmount(inventory.getTotalAmount() + coupon.getAmount());
+        }
+        if (bindOrAmount == 0) {
+            inventory1.setBindCount(inventory.getBindCount() + 1);
+        }
         inventory1.setVersion(version + 1);
         return inventoryMapper.updateByExampleSelective(inventory1, example) == 1;
     }
@@ -297,10 +298,10 @@ public class CouponServiceImpl implements CouponService {
             Coupon coupon = new Coupon();
             coupon.setId(coupon1.getId());
             coupon.setAmount(amount);
-            flag = addtoAmountInventory(coupon);
+            flag = addtoAmountInventory(coupon,1);
             if (!flag) {
                 for (int i = 0; i < 2; i++) {
-                    flag = addtoAmountInventory(coupon);
+                    flag = addtoAmountInventory(coupon,1);
                     if (flag) {
                         break;
                     }
