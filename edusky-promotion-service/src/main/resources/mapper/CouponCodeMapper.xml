@@ -154,7 +154,7 @@
     </collection>
   </resultMap>
   <select id="selectByJoinPage" parameterType="java.util.Map" resultMap="JoinCouponUserAndRestrictResultMap">
-      SELECT tcc.id,tcc.used_flag,tcc.expiration_time,tcc.code
+      SELECT tcc.id,tcc.used_flag,tcc.expiration_time,tcc.code,tc.face_value AS faceValue
               ,tc.`name` AS couponName,tc.application_type AS couponApplicationType
               ,trc.id AS restrict_condition_id,trc.type,trc.restrict_value,trc.description
       FROM t_coupon_code tcc
