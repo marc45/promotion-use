@@ -34,16 +34,16 @@ public interface CouponCodeMapper extends BaseMapper<CouponCode, CouponCodeExamp
      * @param offset
      * @return
      */
-    List<CouponCode> selectByJoinPage(@Param("openId") String openId,@Param("usedFlag") Boolean usedFlag
+    List<CouponCode> selectByJoinPage(@Param("openId") String openId,@Param("usedFlag") Byte usedFlag
             ,@Param("limit") Integer limit, @Param("offset") Integer offset);
 
     /** selectByJoinPage 总数查询
      * @param openId 用户openId
      * @param couponId 优惠券Id
-     * @param usedFlag 使用标识（0没有使用，1已使用，2过期或不可使用 ）
+     * @param usedFlag 使用标识（0没有使用，1已使用，2过期或不可使用      ）
      * @return
      */
-    long selectByJoinCount(@Param("openId") String openId,@Param("couponId") Long couponId,@Param("usedFlag") Boolean usedFlag);
+    long selectByJoinCount(@Param("openId") String openId,@Param("couponId") Long couponId,@Param("usedFlag") Byte usedFlag);
 
     /**查询个人优惠券的使用条件
      * @param openId 用户openId

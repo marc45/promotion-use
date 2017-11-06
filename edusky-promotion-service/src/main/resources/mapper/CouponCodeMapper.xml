@@ -161,18 +161,24 @@
       RIGHT JOIN t_coupon_user tcu ON tcu.coupon_code_id = tcc.id
       INNER JOIN t_coupon tc ON tc.id = tcc.coupon_id
       LEFT JOIN t_restrict_condition trc ON trc.coupon_id = tcc.coupon_id
-      WHERE 1=1 AND tcc.expiration_time >= NOW()
+      WHERE 1=1
       <if test="openId != null">
           AND tcu.user_open_id = #{openId}
       </if>
-      <choose>
-        <when test="usedFlag == 0">
-          AND tcc.used_flag = 0
-        </when>
-        <otherwise>
-          AND tcc.used_flag != 0
-        </otherwise>
-      </choose>
+      <if test="usedFlag != null">
+          <choose>
+              <when test="usedFlag == 0">
+                  AND tcc.expiration_time >= NOW()
+                  AND tcc.used_flag = 0
+              </when>
+              <when test="usedFlag == 2">
+                  AND tcc.expiration_time <![CDATA[<]]> NOW()
+              </when>
+              <otherwise>
+                  AND tcc.used_flag = 1
+              </otherwise>
+          </choose>
+      </if>
       ORDER BY tcc.used_flag ASC,tcc.expiration_time DESC
       LIMIT #{limit} OFFSET #{offset}
   </select>
@@ -185,8 +191,19 @@
         <if test="openId != null">
             AND tcu.user_open_id = #{openId}
         </if>
-        <if test="usedFlag != null or usedFlag == 0">
-            AND tcc.used_flag = #{usedFlag}
+        <if test="usedFlag != null">
+            <choose>
+                <when test="usedFlag == 0">
+                    AND tcc.expiration_time >= NOW()
+                    AND tcc.used_flag = 0
+                </when>
+                <when test="usedFlag == 2">
+                    AND tcc.expiration_time <![CDATA[<]]> NOW()
+                </when>
+                <otherwise>
+                    AND tcc.used_flag = 1
+                </otherwise>
+            </choose>
         </if>
         <if test="couponId != null">
             AND tc.id = #{couponId}

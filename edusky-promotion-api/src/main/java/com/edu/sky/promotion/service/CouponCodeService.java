@@ -40,12 +40,12 @@ public interface CouponCodeService {
 
     /**用户优惠码列表：可以使用，不可使用
      * @param openId 用户openId
-     * @param useFlag 0可以使用，1不可使用（已使用和已过期）
+     * @param useFlag 0可以使用，1已使用, 2已过期）
      * @param pageNum
      * @param pageSize
      * @return
      */
-    Object couponCodePage4User(String openId,Boolean useFlag,Integer pageNum,Integer pageSize);
+    Object couponCodePage4User(String openId,Byte useFlag,Integer pageNum,Integer pageSize);
 
     /**用户使用优惠券购物，更新库存相关字段
      * @param code

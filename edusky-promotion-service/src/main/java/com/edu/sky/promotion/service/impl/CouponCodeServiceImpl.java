@@ -186,15 +186,15 @@ public class CouponCodeServiceImpl implements CouponCodeService {
     }
 
     @Override
-    public Object couponCodePage4User(@ParamAsp("openId") String openId,@ParamAsp("openId") Boolean useFlag
+    public Object couponCodePage4User(@ParamAsp("openId") String openId,@ParamAsp("useFlag") Byte useFlag
             ,@ParamAsp("pageNum")Integer pageNum,@ParamAsp("pageSize")Integer pageSize) {
         PageBean<CouponCode> pageBean = new PageBean(pageNum,pageSize);
         if (StringUtils.isEmpty(useFlag)) {
-            useFlag = false;
+            useFlag = 0;
         }
         pageBean.setList(couponCodeMapper.selectByJoinPage(openId ,useFlag, pageSize
                 ,PageBean.getOffset(pageNum, pageSize)));
-        pageBean.setTotalCount(couponCodeMapper.selectByJoinCount(openId,null,null));
+        pageBean.setTotalCount(couponCodeMapper.selectByJoinCount(openId,null,useFlag));
         return pageBean;
     }
 
