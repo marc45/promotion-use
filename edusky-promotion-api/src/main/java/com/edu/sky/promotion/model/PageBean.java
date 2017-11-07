@@ -1,4 +1,4 @@
-package com.edu.sky.promotion.util;
+package com.edu.sky.promotion.model;
 
 import java.io.Serializable;
 import java.util.List;
@@ -15,7 +15,7 @@ public class PageBean<T> implements Serializable{
 
     public PageBean(){
     }
-    public PageBean(int cp,int pz){
+    public PageBean(int cp, int pz){
         this.pageNo = cp == 0 ? 1 : cp;
         this.pageSize = pz == 0 ? 10 : pz;
     }

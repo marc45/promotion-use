@@ -1,5 +1,6 @@
 package com.edu.sky.promotion.service;
 
+import com.edu.sky.promotion.model.PageBean;
 import com.edu.sky.promotion.po.entity.Coupon;
 
 import java.util.List;
@@ -48,11 +49,17 @@ public interface CouponService {
      * @param coupon
      * @return
      */
-    Object couponPage(Coupon coupon, Integer pageSize, Integer pageNum);
+    PageBean<Coupon> couponPage(Coupon coupon, Integer pageSize, Integer pageNum);
 
     /**查找界面显示的优惠券列表：界面显示优惠券，线上，已上架：供客户端使用
      * @return
      */
     List<Coupon> findCouponByHomeShow();
+
+    /**根据优惠码id查询优惠券信息
+     * @param couponCodeId 优惠码id
+     * @return
+     */
+    Coupon findCouponByCouponCodeId(Long couponCodeId);
 
 }

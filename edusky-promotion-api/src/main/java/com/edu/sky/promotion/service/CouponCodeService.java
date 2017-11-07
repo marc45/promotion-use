@@ -1,8 +1,10 @@
 package com.edu.sky.promotion.service;
 
+import com.edu.sky.promotion.model.PageBean;
 import com.edu.sky.promotion.po.entity.CouponCode;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 优惠券兑换码service
@@ -15,7 +17,7 @@ public interface CouponCodeService {
      * @param pageNum
      * @return
      */
-    Object couponCodePage(CouponCode couponCode,Integer pageSize,Integer pageNum);
+    PageBean<CouponCode> couponCodePage(CouponCode couponCode, Integer pageSize, Integer pageNum);
 
     /**绑定用户和优惠券关系：自己领取
      * @param couponId 优惠券id
@@ -24,7 +26,7 @@ public interface CouponCodeService {
      */
     Object bindCouponCode4User(Long couponId,String openId);
 
-    /**绑定用户和优惠券关系：多优惠码绑定：仅限无限库存优惠券
+    /**绑定用户和优惠券关系：多优惠码绑定：仅限无限库存优惠券  :未使用
      * @param couponCodeIds 优惠码id集合
      * @param openId 用户openId
      * @return
@@ -45,14 +47,14 @@ public interface CouponCodeService {
      * @param pageSize
      * @return
      */
-    Object couponCodePage4User(String openId,Byte useFlag,Integer pageNum,Integer pageSize);
+    PageBean<CouponCode> couponCodePage4User(String openId,Byte useFlag,Integer pageNum,Integer pageSize);
 
     /**用户使用优惠券购物，更新库存相关字段
-     * @param code
-     * @param openId
+     * @param couponCodeId 优惠码id
+     * @param openId 用户openId
      * @return
      */
-    Object userUseCouponCode(String code, String openId);
+    Boolean userUseCouponCode(Long couponCodeId, String openId);
 
     /**根据商品id集合，订单总价查询优惠券信息:
      *      查询优惠券类型，限制条件找出符合的优惠券信息列表
@@ -61,7 +63,7 @@ public interface CouponCodeService {
      * @param openId 用户opengId
      * @return
      */
-    Object findCouponListByWaresId(List<Long> waresIds,Integer waresPrice,String openId);
+    Map<Long,List<CouponCode>> findCouponListByWaresId(List<Long> waresIds, Integer waresPrice, String openId);
 
     /**新人注册赠送优惠券
      * @param openId

@@ -2,7 +2,9 @@ package com.edu.sky.promotion.service.impl;
 
 import com.alibaba.dubbo.config.annotation.Reference;
 import com.alibaba.dubbo.config.annotation.Service;
+import com.edu.sky.core.exception.ResultBean;
 import com.edu.sky.promotion.aop.ParamAsp;
+import com.edu.sky.promotion.model.PageBean;
 import com.edu.sky.promotion.model.WaresQueryModel;
 import com.edu.sky.promotion.po.dao.CouponCodeMapper;
 import com.edu.sky.promotion.po.dao.CouponMapper;
@@ -14,10 +16,8 @@ import com.edu.sky.promotion.po.example.CouponExample;
 import com.edu.sky.promotion.po.example.InventoryExample;
 import com.edu.sky.promotion.service.CouponCodeService;
 import com.edu.sky.promotion.util.DateUtils;
-import com.edu.sky.promotion.util.PageBean;
 import com.edu.sky.promotion.util.RandomCodeUtils;
 import com.edu.sky.wares.api.domain.Wares;
-import com.edu.sky.wares.api.domain.WaresQuery;
 import com.edu.sky.wares.api.service.WaresService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,9 +26,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-import java.lang.reflect.Type;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Service(version = "1.0",timeout = 30000,retries = 0)
 @org.springframework.stereotype.Service
@@ -48,7 +46,7 @@ public class CouponCodeServiceImpl implements CouponCodeService {
     private WaresService waresService;
 
     @Override
-    public Object couponCodePage(@ParamAsp("couponCode") CouponCode couponCode,@ParamAsp("pageSize") Integer pageSize
+    public PageBean<CouponCode> couponCodePage(@ParamAsp("couponCode") CouponCode couponCode,@ParamAsp("pageSize") Integer pageSize
             ,@ParamAsp("pageNum") Integer pageNum) {
         PageBean<CouponCode> pageBean = new PageBean(pageNum,pageSize);
         pageBean.setList(couponCodeMapper.selectAndConditionByPage(couponCode, pageSize, PageBean.getOffset(pageNum, pageSize)));
@@ -186,7 +184,7 @@ public class CouponCodeServiceImpl implements CouponCodeService {
     }
 
     @Override
-    public Object couponCodePage4User(@ParamAsp("openId") String openId,@ParamAsp("useFlag") Byte useFlag
+    public PageBean<CouponCode> couponCodePage4User(@ParamAsp("openId") String openId,@ParamAsp("useFlag") Byte useFlag
             ,@ParamAsp("pageNum")Integer pageNum,@ParamAsp("pageSize")Integer pageSize) {
         PageBean<CouponCode> pageBean = new PageBean(pageNum,pageSize);
         if (StringUtils.isEmpty(useFlag)) {
@@ -199,29 +197,26 @@ public class CouponCodeServiceImpl implements CouponCodeService {
     }
 
     @Override
-    public Object userUseCouponCode(@ParamAsp("code") String code,@ParamAsp("openId") String openId) {
+    @Transactional(rollbackFor = Exception.class)
+    public Boolean userUseCouponCode(@ParamAsp("couponCodeId") Long couponCodeId,@ParamAsp("openId") String openId) {
         long start = System.currentTimeMillis();
         CouponCodeExample example = new CouponCodeExample();
         CouponCodeExample.Criteria criteria = example.createCriteria();
-        criteria.andCodeEqualTo(code);
+        criteria.andIdEqualTo(couponCodeId).andUsedFlagEqualTo((byte)0);
         List<CouponCode> couponCodes = couponCodeMapper.selectByExample(example);
         if (couponCodes == null || couponCodes.isEmpty()) {
-            return 102;//该优惠码不存在
+            return false;
         }
         CouponCode couponCode = couponCodes.get(0);
         Long couponId = couponCode.getCouponId();
+        //优惠券信息
         Coupon coupon = couponMapper.selectById(couponId);
-        if (coupon == null || coupon.getCommonState() != 1) {
-            return 100;//优惠券不存在或者已下线
-        }
+        //优惠券库存信息
         Inventory inventory = inventoryMapper.selectByCouponId(couponId);
-        if (inventory == null) {
-            return 101;//优惠券错误
-        }
         CouponCodeExample example1 = new CouponCodeExample();
-        CouponCodeExample.Criteria criteria1 = example.createCriteria();
-        CouponCode couponCodeNew = new CouponCode();
+        CouponCodeExample.Criteria criteria1 = example1.createCriteria();
         criteria1.andIdEqualTo(couponCode.getId());
+        CouponCode couponCodeNew = new CouponCode();
         couponCodeNew.setUsedFlag((byte)1);
         couponCodeNew.setUsedTime(new Date());
         couponCodeNew.setUpdateTime(new Date());
@@ -230,12 +225,16 @@ public class CouponCodeServiceImpl implements CouponCodeService {
         if (flag) {
             flag = refreshInventoryAndRetry(flag, coupon, inventory, 1);
         }
+        if (!flag) {
+            throw new RuntimeException(ResultBean.getFailResultString(153006,"优惠码无法使用！"));
+        }
         logger.info("userUseCouponCode用户使用优惠券耗时(毫秒)：" + (System.currentTimeMillis() - start));
         return flag;
     }
 
     @Override
-    public Object findCouponListByWaresId(@ParamAsp("waresIds") List<Long> waresIds,@ParamAsp("waresPrice") Integer waresPrice
+    public Map<Long,List<CouponCode>> findCouponListByWaresId(@ParamAsp("waresIds") List<Long> waresIds
+            ,@ParamAsp("waresPrice") Integer waresPrice
             ,@ParamAsp("openId") String openId) {
         List<Wares> waresList = waresService.queryWaresListByWaresIds(waresIds);
         if (waresList == null || waresList.isEmpty()) {
@@ -262,16 +261,19 @@ public class CouponCodeServiceImpl implements CouponCodeService {
         //通过商品列表遍历用户优惠码列表
         for (Wares wares : waresList) {
             List<CouponCode> waresCouponCodes = new ArrayList<>();
-            for (CouponCode couponCode : couponCodes) {
+            Iterator<CouponCode> iterator1 = couponCodes.iterator();
+            while (iterator1.hasNext()) {
+                CouponCode couponCode = iterator1.next();
                 List<RestrictCondition> restrictConditions = couponCode.getRestrictConditions();
                 boolean flag = judgeRestrictCondition(restrictConditions,waresPrice,waresQueryModels,wares.getId());
                 if (flag) {
                     waresCouponCodes.add(couponCode);
+                    iterator1.remove();
+                    break;
                 }
             }
             map.put(wares.getId(),waresCouponCodes);
         }
-
         return map;
     }
 
@@ -289,7 +291,7 @@ public class CouponCodeServiceImpl implements CouponCodeService {
                 .andHomeShowEqualTo(false);
         List<Coupon> coupons = couponMapper.selectByExample(example);
         if (coupons == null || coupons.isEmpty()) {
-            return false;
+            return null;
         }
         Coupon coupon = coupons.get(0);
         if(coupon == null || coupon.getCommonState() != 1){
@@ -327,6 +329,7 @@ public class CouponCodeServiceImpl implements CouponCodeService {
         if (coupons == null || coupons.isEmpty()) {
             return false;
         }
+        //暂且取一个
         Coupon coupon = coupons.get(0);
         if(coupon == null || coupon.getCommonState() != 1){
             return "优惠券不存在或者已下线";
@@ -499,20 +502,14 @@ public class CouponCodeServiceImpl implements CouponCodeService {
         long version = inventory.getVersion();
         InventoryExample inventoryExample = new InventoryExample();
         InventoryExample.Criteria criteria1 = inventoryExample.createCriteria();
-        criteria1.andCouponIdEqualTo(coupon.getId());
-        criteria1.andVersionEqualTo(version);
+        criteria1.andCouponIdEqualTo(coupon.getId()).andVersionEqualTo(version);
         inventory.setVersion(inventory.getVersion() + 1);
         if (bindOruse == 0) {
             inventory.setBindCount(inventory.getBindCount() + 1);
-            res = inventoryMapper.updateByExampleSelective(inventory, inventoryExample);
         }else{
             inventory.setUsedCount(inventory.getUsedCount() + 1);
-            //没有库存属性
-            if (!coupon.getInventoryFlag() && inventory.getTotalAmount() != null
-                    && inventory.getTotalAmount() - inventory.getBindCount() > 0){
-                res = inventoryMapper.updateByExampleSelective(inventory, inventoryExample);
-            }
         }
+        res = inventoryMapper.updateByExampleSelective(inventory, inventoryExample);
         logger.info("updateInventory更新库存状态耗时(毫秒)：" + (System.currentTimeMillis() - start));
         return res;
     }
@@ -536,8 +533,8 @@ public class CouponCodeServiceImpl implements CouponCodeService {
                     if (condition.getRestrictValue() <= waresPrice) {
                         flag = true;
                     }
+                    judgeMap.put("price",flag);
                 }
-                judgeMap.put("price",flag);
                 if (condition.getType().byteValue() == 3) {
                     if (model.getWaresId().longValue() == waresId.longValue()) {
                         if (model.getProductType().intValue() == condition.getRestrictValue().intValue()) {

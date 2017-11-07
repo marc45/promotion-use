@@ -2,23 +2,26 @@ package com.edu.sky.promotion.service.impl;
 
 import com.alibaba.dubbo.config.annotation.Service;
 import com.edu.sky.promotion.aop.ParamAsp;
-import com.edu.sky.promotion.po.dao.*;
-import com.edu.sky.promotion.po.entity.*;
+import com.edu.sky.promotion.model.PageBean;
+import com.edu.sky.promotion.po.dao.CouponCodeMapper;
+import com.edu.sky.promotion.po.dao.CouponMapper;
+import com.edu.sky.promotion.po.dao.InventoryMapper;
+import com.edu.sky.promotion.po.dao.RestrictConditionMapper;
+import com.edu.sky.promotion.po.entity.Coupon;
+import com.edu.sky.promotion.po.entity.CouponCode;
+import com.edu.sky.promotion.po.entity.Inventory;
+import com.edu.sky.promotion.po.entity.RestrictCondition;
 import com.edu.sky.promotion.po.example.CouponCodeExample;
 import com.edu.sky.promotion.po.example.CouponExample;
 import com.edu.sky.promotion.po.example.InventoryExample;
 import com.edu.sky.promotion.service.CouponService;
 import com.edu.sky.promotion.util.DateUtils;
-import com.edu.sky.promotion.util.PageBean;
 import com.edu.sky.promotion.util.RandomCodeUtils;
-import org.mybatis.spring.SqlSessionTemplate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -184,7 +187,7 @@ public class CouponServiceImpl implements CouponService {
     }
 
     @Override
-    public Object couponPage(@ParamAsp("coupon") Coupon coupon,@ParamAsp("pageSize") Integer pageSize
+    public PageBean<Coupon> couponPage(@ParamAsp("coupon") Coupon coupon,@ParamAsp("pageSize") Integer pageSize
             ,@ParamAsp("pageNum") Integer pageNum) {
         PageBean<Coupon> pageBean = new PageBean<>(pageNum,pageSize);
         CouponExample example = getExample(coupon, true);
@@ -201,6 +204,12 @@ public class CouponServiceImpl implements CouponService {
                 .andOnLineFlagEqualTo((byte) 1)
                 .andHomeShowEqualTo(true);
         return couponMapper.selectByExample(example);
+    }
+
+    @Override
+    public Coupon findCouponByCouponCodeId(Long couponCodeId){
+
+        return null;
     }
 
 /*--------------------------------------------------------------------------------------------------------------------*/

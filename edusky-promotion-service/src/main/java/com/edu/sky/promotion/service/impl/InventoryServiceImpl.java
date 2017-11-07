@@ -2,10 +2,10 @@ package com.edu.sky.promotion.service.impl;
 
 import com.alibaba.dubbo.config.annotation.Service;
 import com.edu.sky.promotion.aop.ParamAsp;
+import com.edu.sky.promotion.model.PageBean;
 import com.edu.sky.promotion.po.dao.InventoryMapper;
 import com.edu.sky.promotion.po.example.InventoryExample;
 import com.edu.sky.promotion.service.InventoryService;
-import com.edu.sky.promotion.util.PageBean;
 import org.springframework.beans.factory.annotation.Autowired;
 
 @Service(version = "1.0",retries = 0)
