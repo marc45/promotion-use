@@ -21,7 +21,7 @@ public interface CouponService {
      * @param coupon
      * @return
      */
-    Object addCoupon(Coupon coupon) ;
+    Long addCoupon(Coupon coupon) ;
 
     /**查询优惠券信息：本身信息，库存信息，限制条件等信息
      * @param couponId
@@ -34,7 +34,7 @@ public interface CouponService {
      * @param changeType 1追加数量，2更改过期时间Integer changeType
      * @return
      */
-    Object updateAddToCoupon(Coupon coupon,Integer changeType) ;
+    Boolean updateAddToCoupon(Coupon coupon,Integer changeType) ;
 
     /**更新优惠券上下架状态
      * @param couponId
@@ -58,8 +58,9 @@ public interface CouponService {
 
     /**根据优惠码id查询优惠券信息
      * @param couponCodeId 优惠码id
+     * @param openId 用户openId
      * @return
      */
-    Coupon findCouponByCouponCodeId(Long couponCodeId);
+    Coupon findCouponByCouponCodeId(Long couponCodeId,String openId);
 
 }

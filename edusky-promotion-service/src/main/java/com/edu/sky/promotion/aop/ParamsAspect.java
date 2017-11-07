@@ -56,7 +56,7 @@ public class ParamsAspect {
                 return;
             }
             List<String> paramNames =getParamNames(method);//参数名称
-            String name = point.getTarget().getClass().getName() + "." + methodName + "{0}";
+            String name = point.getTarget().getClass().getSimpleName() + "." + methodName + "{0}";
             Class<?>[] parameterTypes = method.getParameterTypes();
             Object[] args = point.getArgs();
             if (paramNames.size() != parameterTypes.length) {
@@ -70,9 +70,9 @@ public class ParamsAspect {
             sb.append("(");
             for (int i = 0; i < parameterTypes.length;i++) {
                 if ((i+1) == parameterTypes.length) {
-                    sb.append(parameterTypes[i].getName() + " " + paramNames.get(i));
+                    sb.append(parameterTypes[i].getSimpleName() + " " + paramNames.get(i));
                 }else {
-                    sb.append(parameterTypes[i].getName() + " " + paramNames.get(i) + ",");
+                    sb.append(parameterTypes[i].getSimpleName() + " " + paramNames.get(i) + ",");
                 }
             }
             sb.append(")");

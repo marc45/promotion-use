@@ -42,4 +42,11 @@ public interface CouponMapper extends BaseMapper<Coupon, CouponExample, Long> {
      * @return
      */
     Coupon selectByIdJoinInventoryAndConditions(Long couponId);
+
+    /**根据优惠码id查询优惠券信息
+     * @param couponCodeId 优惠码Id
+     * @param openId 用户openId
+     * @return
+     */
+    Coupon selectByCouponCodeId(@Param("couponCodeId") Long couponCodeId,@Param("openId") String openId);
 }

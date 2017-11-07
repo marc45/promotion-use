@@ -1,6 +1,7 @@
 package com.edu.sky.promotion.service.impl;
 
 import com.alibaba.dubbo.config.annotation.Service;
+import com.edu.sky.core.exception.ResultBean;
 import com.edu.sky.promotion.aop.ParamAsp;
 import com.edu.sky.promotion.model.PageBean;
 import com.edu.sky.promotion.po.dao.CouponCodeMapper;
@@ -43,7 +44,7 @@ public class CouponServiceImpl implements CouponService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public Object addCoupon(@ParamAsp("coupon") Coupon coupon) {
+    public Long addCoupon(@ParamAsp("coupon") Coupon coupon) {
         long startTime = System.currentTimeMillis();
         coupon.setCreateTime(new Date());
         coupon.setUpdateTime(new Date());
@@ -69,9 +70,8 @@ public class CouponServiceImpl implements CouponService {
             coupon.setStartTime(null);
             coupon.setEndTime(null);
         }
-        boolean flag = couponMapper.insertSelective(coupon) == 1;
-        if (!flag) {
-            return false;
+        if (couponMapper.insertSelective(coupon) != 1) {
+            throw new RuntimeException(ResultBean.getFailResultString(153007,"优惠码增加失败!"));
         }
         Long id = coupon.getId();
         Inventory inventory = new Inventory();
@@ -81,7 +81,7 @@ public class CouponServiceImpl implements CouponService {
             inventory.setTotalAmount(coupon.getAmount());
         }
         if (inventoryMapper.insertSelective(inventory) != 1) {
-            throw new RuntimeException("优惠码增加库存失败!");
+            throw new RuntimeException(ResultBean.getFailResultString(153008,"优惠码增加库存失败!"));
         }
         if (coupon.getRestrictFlag()) {
             int res1 = inventoryMapper.insertSelective(inventory);
@@ -93,33 +93,36 @@ public class CouponServiceImpl implements CouponService {
             });
             int res3 = restrictConditionMapper.insertList(restrictConditions);
             if (res3 != restrictConditions.size()) {
-                throw new RuntimeException("优惠码增加限制条件失败!");
+                throw new RuntimeException(ResultBean.getFailResultString(153009
+                        ,"优惠码增加限制条件失败!"));
             }
         }
-        List<CouponCode> couponCodes = new ArrayList<>();
-        for (int i = 0; i < coupon.getAmount(); i++) {
-            CouponCode couponCode = new CouponCode();
-            couponCode.setCouponId(id);
-            couponCode.setExportFlag(false);
-            couponCode.setExpirationTime(expirationTime);
-            couponCode.setCreateTime(new Date());
-            couponCode.setUpdateTime(new Date());
-            couponCode.setUsedFlag((byte) 0);
-            couponCode.setBindType((byte)0);
-            couponCode.setCode(RandomCodeUtils.getCouponCode());
-            couponCodes.add(couponCode);
-        }
-        if (!couponCodes.isEmpty()) {
-            int res2 = couponCodeMapper.insertList(couponCodes);
-            if (res2 == couponCodes.size()) {
-                long endTimes = System.currentTimeMillis();
-                logger.info("批量优惠码增加数据耗时(毫秒)：" + (endTimes - startTime));
-                return coupon.getId();
-            } else {
-                throw new RuntimeException("批量优惠码增加数据失败！");
+        if (coupon.getInventoryFlag()) {
+            List<CouponCode> couponCodes = new ArrayList<>();
+            for (int i = 0; i < coupon.getAmount(); i++) {
+                CouponCode couponCode = new CouponCode();
+                couponCode.setCouponId(id);
+                couponCode.setExportFlag(false);
+                couponCode.setExpirationTime(expirationTime);
+                couponCode.setCreateTime(new Date());
+                couponCode.setUpdateTime(new Date());
+                couponCode.setUsedFlag((byte) 0);
+                couponCode.setBindType((byte)0);
+                couponCode.setCode(RandomCodeUtils.getCouponCode());
+                couponCodes.add(couponCode);
+            }
+            if (!couponCodes.isEmpty()) {
+                int res2 = couponCodeMapper.insertList(couponCodes);
+                if (res2 == couponCodes.size()) {
+                } else {
+                    throw new RuntimeException(ResultBean.getFailResultString(153010
+                            ,"批量优惠码增加数据失败！"));
+                }
             }
         }
-        return coupon.getId();
+        long endTimes = System.currentTimeMillis();
+        logger.debug("批量优惠码增加数据耗时(毫秒)：" + (endTimes - startTime));
+        return id;
     }
 
     @Override
@@ -134,36 +137,37 @@ public class CouponServiceImpl implements CouponService {
      */
     @Override//只能追加数量和延长时间,修改个人是否能够重复领取
     @Transactional(rollbackFor = Exception.class)
-    public Object updateAddToCoupon(@ParamAsp("coupon") Coupon coupon,@ParamAsp("changeType") Integer changeType) {
+    public Boolean updateAddToCoupon(@ParamAsp("coupon") Coupon coupon,@ParamAsp("changeType") Integer changeType) {
         boolean flag = false;
         CouponExample example = new CouponExample();
         CouponExample.Criteria criteria = example.createCriteria();
         criteria.andIdEqualTo(coupon.getId()).andDelFlagEqualTo(false);
         List<Coupon> couponList = couponMapper.selectByExample(example);
-        if (couponList == null || couponList.isEmpty()) {
-            return "此优惠券无效!";
-        }
         Coupon coupon1 = couponList.get(0);
         if (coupon1.getCommonState().byteValue() == 1) {
-            return "追加前请先把优惠券下架!";
+            throw new RuntimeException(ResultBean.getFailResultString(153002,"追加前请先把优惠券下架!"));
         }
         //优惠券数量追加
         if (changeType.intValue() == 1) {
             if (!coupon1.getInventoryFlag()) {
-                return "此为无限库存优惠券不支持库存修改!";
+                throw new RuntimeException(ResultBean.getFailResultString(153003
+                        ,"此为无限库存优惠券不支持库存修改!"));
             }
             if (coupon.getAmount() == null || coupon.getAmount() <= 0) {
-                return "追加数量不能为空或者小于等于0!";
+                throw new RuntimeException(ResultBean.getFailResultString(153004
+                        ,"追加数量不能为空或者小于等于0!"));
             }
             return addToAmount(coupon1,coupon.getAmount());
         }
         //优惠券时间更改
         if (changeType.intValue() == 2) {
             if (coupon.getFixType() == null) {
-                return "时间类型不能为空";
+                throw new RuntimeException(ResultBean.getFailResultString(153005
+                        ,"时间类型不能为空!"));
             }
             if (coupon1.getFixType().byteValue() != coupon.getFixType().byteValue()) {
-                return "原优惠券时间类型和输入时间类型不匹配！";
+                throw new RuntimeException(ResultBean.getFailResultString(153006
+                        ,"原优惠券时间类型和输入时间类型不匹配！!"));
             }
             return addToTime(coupon1, coupon);
         }
@@ -207,9 +211,8 @@ public class CouponServiceImpl implements CouponService {
     }
 
     @Override
-    public Coupon findCouponByCouponCodeId(Long couponCodeId){
-
-        return null;
+    public Coupon findCouponByCouponCodeId(Long couponCodeId,String openId){
+        return couponMapper.selectByCouponCodeId(couponCodeId,openId);
     }
 
 /*--------------------------------------------------------------------------------------------------------------------*/
@@ -298,7 +301,8 @@ public class CouponServiceImpl implements CouponService {
             if (res2 == couponCodes.size()) {
                 flag = true;
             } else {
-                throw new RuntimeException("批量优惠码增加数据失败！");
+                throw new RuntimeException(ResultBean.getFailResultString(153011
+                        ,"批量优惠码增加数据失败！"));
             }
 
         }

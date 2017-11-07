@@ -1,6 +1,7 @@
 package com.edu.sky.promotion.service;
 
 import com.edu.sky.promotion.model.PageBean;
+import com.edu.sky.promotion.po.entity.Coupon;
 import com.edu.sky.promotion.po.entity.CouponCode;
 
 import java.util.List;
@@ -24,21 +25,21 @@ public interface CouponCodeService {
      * @param openId 用户id
      * @return
      */
-    Object bindCouponCode4User(Long couponId,String openId);
+    Boolean bindCouponCode4User(Long couponId,String openId);
 
     /**绑定用户和优惠券关系：多优惠码绑定：仅限无限库存优惠券  :未使用
      * @param couponCodeIds 优惠码id集合
      * @param openId 用户openId
      * @return
      */
-    Object bindCouponCode4User(List<Long> couponCodeIds,String openId);
+    List<CouponCode> bindCouponCode4User(List<Long> couponCodeIds,String openId);
 
     /**绑定用户和优惠券关系：输入优惠码领取优惠券
      * @param couponCode 优惠码
      * @param openId 用户openId
      * @return
      */
-    Object bindCouponCode4User(String couponCode,String openId);
+    Boolean bindCouponCode4User(String couponCode,String openId);
 
     /**用户优惠码列表：可以使用，不可使用
      * @param openId 用户openId
@@ -69,13 +70,13 @@ public interface CouponCodeService {
      * @param openId
      * @return
      */
-    Object registerToGiveAwayCoupon(String openId);
+    Coupon registerToGiveAwayCoupon(String openId);
 
     /**登录送优惠券
      * @param openId
      * @return
      */
-    Object signInToGiveAwayCoupons(String openId);
+    Coupon signInToGiveAwayCoupons(String openId);
 
 
 }

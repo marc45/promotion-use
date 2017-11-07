@@ -1,5 +1,7 @@
 package com.edu.sky.promotion.service;
 
+import com.edu.sky.promotion.model.PageBean;
+
 public interface InventoryService {
 
     /**
@@ -8,6 +10,6 @@ public interface InventoryService {
      * @param pageSize
      * @return
      */
-    Object inventoryPage(Integer pageNum,Integer pageSize);
+    PageBean inventoryPage(Integer pageNum, Integer pageSize);
 
 }

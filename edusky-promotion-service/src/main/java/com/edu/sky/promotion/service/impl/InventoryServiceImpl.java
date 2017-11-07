@@ -15,7 +15,7 @@ public class InventoryServiceImpl implements InventoryService {
     private InventoryMapper inventoryMapper;
 
     @Override
-    public Object inventoryPage(@ParamAsp("pageNum") Integer pageNum,@ParamAsp("pageSize") Integer pageSize) {
+    public PageBean inventoryPage(@ParamAsp("pageNum") Integer pageNum,@ParamAsp("pageSize") Integer pageSize) {
         PageBean pageBean = new PageBean(pageNum,pageSize);
         InventoryExample example = new InventoryExample();
         example.setOrderByClause("create_time DESC");

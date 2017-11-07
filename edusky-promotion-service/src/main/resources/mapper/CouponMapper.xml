@@ -359,4 +359,15 @@
         LEFT JOIN t_restrict_condition trc ON trc.coupon_id = tc.id
         WHERE tc.id = #{couponId}
     </select>
+  <select id="selectByCouponCodeId" parameterType="java.util.Map" resultMap="BaseResultMap">
+      SELECT tc.id,tc.`name`,tc.`type`,tc.face_value,tc.inventory_flag,tc.restrict_flag,tc.fix_type
+            ,tc.start_time,tc.end_time,tc.expire_day,tc.description,tc.common_state
+            ,tc.on_line_flag,tc.repeat_flag,tc.home_show,tc.create_time,tc.update_time
+      FROM t_coupon tc
+      INNER JOIN t_coupon_code tcc ON tcc.coupon_id = tc.id
+      INNER JOIN t_coupon_user tcu ON tcu.coupon_code_id = tcc.id
+      WHERE tc.del_flag = 0 AND tc.common_state = 1 AND tcc.used_flag = 0
+          AND tcc.id = #{couponCodeId}
+          AND tcu.user_open_id = #{openId}
+  </select>
 </mapper>

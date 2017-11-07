@@ -56,10 +56,10 @@ public class CouponCodeServiceImpl implements CouponCodeService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public Object bindCouponCode4User(@ParamAsp("couponId") Long couponId,@ParamAsp("openId") String openId) {
+    public Boolean bindCouponCode4User(@ParamAsp("couponId") Long couponId,@ParamAsp("openId") String openId) {
         Coupon coupon = couponMapper.selectById(couponId);
         if(coupon == null || coupon.getCommonState() != 1){
-            return "优惠券不存在或者已下线";
+            throw new RuntimeException(ResultBean.getFailResultString(153016,"优惠券不存在或者已下线!"));
         }
         return bindCouponCode4UserService(coupon,openId,(byte)2);
     }
@@ -71,25 +71,25 @@ public class CouponCodeServiceImpl implements CouponCodeService {
      * @param bindType 绑定类型：0未绑定;1系统自动绑定;2自己领取绑定;3输入优惠码绑定
      * @return
      */
-    private Object bindCouponCode4UserService(Coupon coupon, String openId, Byte bindType) {
+    private Boolean bindCouponCode4UserService(Coupon coupon, String openId, Byte bindType) {
         long start = System.currentTimeMillis();
         Long couponId = coupon.getId();
         if (!coupon.getRepeatFlag()) {
             long count = couponCodeMapper.selectByJoinCount(openId, couponId, null);
             if (count > 0) {
-                return "该优惠券不可重复领取";
+                throw new RuntimeException(ResultBean.getFailResultString(153013,"该优惠券不可重复领取!"));
             }
         }
         Inventory inventory = inventoryMapper.selectByCouponId(couponId);
         if (inventory == null) {
-            return "优惠券错误";
+            throw new RuntimeException(ResultBean.getFailResultString(153014,"优惠券错误!"));
         }
         CouponCode couponCode1 = new CouponCode();
         couponCode1.setBindType(bindType == null ? 2 : bindType);
         //有库存的优惠券查询一个绑定；没有库存的直接创建一个
         if (coupon.getInventoryFlag()) {
             if (inventory.getTotalAmount() - inventory.getBindCount() == 0) {
-                return "该优惠券没有库存了";
+                throw new RuntimeException(ResultBean.getFailResultString(153015,"该优惠券没有库存了!"));
             }
             CouponCode couponCode = new CouponCode();
             couponCode.setUsedFlag((byte) 0);
@@ -120,11 +120,11 @@ public class CouponCodeServiceImpl implements CouponCodeService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public Object bindCouponCode4User(@ParamAsp("couponIds") List<Long> couponIds,@ParamAsp("openId") String openId) {
+    public List<CouponCode> bindCouponCode4User(@ParamAsp("couponIds") List<Long> couponIds,@ParamAsp("openId") String openId) {
         long start = System.currentTimeMillis();
         List<Coupon> coupons = couponMapper.selectByIdList(couponIds);
         if (coupons == null || couponIds.isEmpty()) {
-            return 100;//优惠券不可用
+            return new ArrayList<>();
         }
         List<Inventory> inventories = inventoryMapper.selectByCouponIdList(couponIds);
         List<CouponCode> couponCodes = new ArrayList<>();
@@ -147,35 +147,35 @@ public class CouponCodeServiceImpl implements CouponCodeService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public Object bindCouponCode4User(@ParamAsp("code") String code,@ParamAsp("openId") String openId) {
+    public Boolean bindCouponCode4User(@ParamAsp("code") String code,@ParamAsp("openId") String openId) {
         long start = System.currentTimeMillis();
         CouponCodeExample example = new CouponCodeExample();
         CouponCodeExample.Criteria criteria = example.createCriteria();
         criteria.andCodeEqualTo(code).andBindTypeEqualTo((byte)0);
         List<CouponCode> couponCodes = couponCodeMapper.selectByExample(example);
         if (couponCodes == null || couponCodes.isEmpty()) {
-            return 101;//该优惠券已被使用
+            throw new RuntimeException(ResultBean.getFailResultString(153011,"该优惠券已被绑定！"));
         }
         CouponCode couponCode = couponCodes.get(0);
         couponCode.setBindType((byte)3);
         Long couponId = couponCode.getCouponId();
         Coupon coupon = couponMapper.selectById(couponId);
         if (coupon == null || coupon.getCommonState() != 1) {
-            return 100;//优惠券不存在或者已下线
+            throw new RuntimeException(ResultBean.getFailResultString(153012,"优惠券不存在或者已下线！"));
         }
         if (!coupon.getRepeatFlag()) {
             long repeat = couponCodeMapper.selectByJoinCount(openId, couponId, null);
             if (repeat > 0) {
-                return 103;//该优惠券不可重复领取
+                throw new RuntimeException(ResultBean.getFailResultString(153013,"该优惠券不可重复领取！"));
             }
         }
         Inventory inventory = inventoryMapper.selectByCouponId(couponId);
         if (inventory == null) {
-            return 101;//优惠券错误
+            throw new RuntimeException(ResultBean.getFailResultString(153014,"优惠券错误！"));
         }
         if (coupon.getInventoryFlag()) {
             if (inventory.getTotalAmount() - inventory.getBindCount() == 0) {
-                return 102;//该优惠券没有库存了
+                throw new RuntimeException(ResultBean.getFailResultString(153015,"该优惠券没有库存了！"));
             }
         }
         Boolean flag = bindCouponCodeAndRefreshInventory(coupon, couponCode, openId, inventory);
@@ -283,7 +283,7 @@ public class CouponCodeServiceImpl implements CouponCodeService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public Object registerToGiveAwayCoupon(@ParamAsp("openId") String openId) {
+    public Coupon registerToGiveAwayCoupon(@ParamAsp("openId") String openId) {
         CouponExample example = new CouponExample();
         CouponExample.Criteria criteria = example.createCriteria();
         criteria.andTypeEqualTo((byte)4).andDelFlagEqualTo(false).andCommonStateEqualTo((byte) 1)
@@ -295,27 +295,23 @@ public class CouponCodeServiceImpl implements CouponCodeService {
         }
         Coupon coupon = coupons.get(0);
         if(coupon == null || coupon.getCommonState() != 1){
-            return "优惠券不存在或者已下线";
+            return null;
         }
-        Object bindCouponCode4User = bindCouponCode4UserService(coupon, openId, (byte) 1);
-        Boolean flag = false;
-        if (bindCouponCode4User instanceof Boolean) {
-            flag = (Boolean) bindCouponCode4User;
-            if (flag) {
-                return coupon;
-            }
+        Boolean flag = bindCouponCode4UserService(coupon, openId, (byte) 1);
+        if (!flag) {
+            return null;
         }
-        return bindCouponCode4User;
+        return coupon;
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public Object signInToGiveAwayCoupons(@ParamAsp("openId") String openId){
+    public Coupon signInToGiveAwayCoupons(@ParamAsp("openId") String openId){
         Boolean aBoolean = redisTemplate.hasKey(SIGNINFLAG);
         if (aBoolean) {
             Boolean hasKey = redisTemplate.opsForHash().hasKey(SIGNINFLAG, openId);
             if (hasKey) {
-                return false;
+                return null;
             }
         }
         redisTemplate.opsForHash().put(SIGNINFLAG,openId,DateUtils.toString(new Date(),DateUtils.DATE_FORMAT_DATETIME));
@@ -327,22 +323,18 @@ public class CouponCodeServiceImpl implements CouponCodeService {
                 .andHomeShowEqualTo(false);
         List<Coupon> coupons = couponMapper.selectByExample(example);
         if (coupons == null || coupons.isEmpty()) {
-            return false;
+            return null;
         }
         //暂且取一个
         Coupon coupon = coupons.get(0);
         if(coupon == null || coupon.getCommonState() != 1){
-            return "优惠券不存在或者已下线";
+            return null;
         }
-        Object bindCouponCode4User = bindCouponCode4UserService(coupon, openId, (byte) 1);
-        Boolean flag = false;
-        if (bindCouponCode4User instanceof Boolean) {
-            flag = (Boolean) bindCouponCode4User;
-            if (flag) {
-                return coupon;
-            }
+        Boolean flag= bindCouponCode4UserService(coupon, openId, (byte) 1);
+        if (!flag) {
+            return null;
         }
-        return bindCouponCode4User;
+        return coupon;
     }
 
     /*--------------------------------------------------------------------------------------------------------------------*/
