@@ -57,4 +57,10 @@ public interface CouponCodeMapper extends BaseMapper<CouponCode, CouponCodeExamp
      */
     long updateListExpirationTime(@Param("couponId") Long couponId,@Param("expireDay") Integer expireDay);
 
+    /**查询优惠码信息：附带优惠券名称，面值等信息
+     * @param couponCode 查询实体
+     * @return
+     */
+    List<CouponCode> selectByJoinCoupon(CouponCode couponCode);
+
 }

@@ -78,5 +78,10 @@ public interface CouponCodeService {
      */
     Coupon signInToGiveAwayCoupons(String openId);
 
+    /**查询coupon列表：导出Excel使用
+     * @param couponId 优惠券id（可选）
+     */
+    List<CouponCode> findByJoinCoupon(Long couponId);
+
 
 }

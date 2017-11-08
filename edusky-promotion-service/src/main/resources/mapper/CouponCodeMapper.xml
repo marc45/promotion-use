@@ -114,14 +114,14 @@
       <if test="record.couponId != null">
         AND tcc.coupon_id = #{record.couponId,jdbcType=BIGINT}
       </if>
-      <if test="record.code != null">
+      <if test="record.code != null and record.code != ''">
         AND tcc.code = #{record.code,jdbcType=VARCHAR}
       </if>
       <if test="record.usedFlag != null or record.usedFlag == 0">
-        AND tcc.used_flag = .#{record.usedFlag,jdbcType=TINYINT}
+        AND tcc.used_flag = #{record.usedFlag,jdbcType=TINYINT}
       </if>
       <if test="record.exportFlag != null or record.exportFlag == 0">
-        AND tcc.exportflag = #{record.exportFlag,jdbcType=BIT}
+        AND tcc.export_flag = #{record.exportFlag,jdbcType=BIT}
       </if>
       <if test="record.bindType != null or record.bindType == 0">
         AND tcc.bind_type = #{record.bindType,jdbcType=TINYINT}
@@ -139,14 +139,14 @@
         <if test="record.couponId != null">
             AND tcc.coupon_id = #{record.couponId,jdbcType=BIGINT}
         </if>
-        <if test="record.code != null">
+        <if test="record.code != null and record.code != ''">
             AND tcc.code = #{record.code,jdbcType=VARCHAR}
         </if>
         <if test="record.usedFlag != null or record.usedFlag == 0">
-            AND tccused_flag = .#{record.usedFlag,jdbcType=TINYINT}
+            AND tcc.used_flag = #{record.usedFlag,jdbcType=TINYINT}
         </if>
         <if test="record.exportFlag != null or record.exportFlag == 0">
-            AND tcc.exportflag = #{record.exportFlag,jdbcType=BIT}
+            AND tcc.export_flag = #{record.exportFlag,jdbcType=BIT}
         </if>
         <if test="record.bindType != null or record.bindType == 0">
             AND tcc.bind_type = #{record.bindType,jdbcType=TINYINT}
@@ -410,4 +410,19 @@
         END
         WHERE coupon_id = #{couponId}
     </update>
+    <select id="selectByJoinCoupon" parameterType="com.edu.sky.promotion.po.entity.CouponCode" resultMap="JoinCouponUserAndRestrictResultMap">
+        SELECT tcc.id,tcc.coupon_id,tcc.used_flag,tcc.expiration_time,tcc.code,tc.face_value AS faceValue
+              ,tc.`name` AS couponName,tc.application_type AS couponApplicationType
+        FROM t_coupon_code tcc
+        <if test="couponId != null">
+        INNER JOIN t_coupon tc ON tc.id = tcc.coupon_id
+        </if>
+        WHERE tc.del_flag = 0 AND tc.on_line_flag = 0 AND tc.common_state = 1
+        <if test="couponId != null">
+            AND tcc.coupon_id = #{couponId}
+        </if>
+        <if test="exportFlag != null or export_flag == 0">
+            AND export_flag = #{exportFlag}
+        </if>
+    </select>
 </mapper>

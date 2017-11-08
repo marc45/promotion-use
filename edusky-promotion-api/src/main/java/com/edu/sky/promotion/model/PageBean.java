@@ -15,20 +15,20 @@ public class PageBean<T> implements Serializable{
 
     public PageBean(){
     }
-    public PageBean(int cp, int pz){
-        this.pageNo = cp == 0 ? 1 : cp;
-        this.pageSize = pz == 0 ? 10 : pz;
+    public PageBean(int pageNo, int pageSize){
+        this.pageNo = pageNo == 0 ? 1 : pageNo;
+        this.pageSize = pageSize == 0 ? 10 : pageSize;
     }
 
-	public static int getOffset(int cp, int pz){
-        return (cp - 1) * pz;
+	public static int getOffset(int pageNo, int pageSize){
+        return (pageNo - 1) * pageSize;
     }
 
-    public int getCp() {
+    public int getPageNo() {
         return pageNo;
     }
 
-    public int getPz() {
+    public int getPageSize() {
         return pageSize;
     }
 

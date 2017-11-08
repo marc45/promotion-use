@@ -337,6 +337,16 @@ public class CouponCodeServiceImpl implements CouponCodeService {
         return coupon;
     }
 
+    @Override
+    public List<CouponCode> findByJoinCoupon(Long couponId) {
+        CouponCode couponCode = new CouponCode();
+        couponCode.setExportFlag(false);
+        if (!StringUtils.isEmpty(couponId)) {
+            couponCode.setCouponId(couponId);
+        }
+        return couponCodeMapper.selectByJoinCoupon(couponCode);
+    }
+
     /*--------------------------------------------------------------------------------------------------------------------*/
     private CouponCodeExample getExam(CouponCode couponCode,boolean orderFlag){
         CouponCodeExample example = new CouponCodeExample();
