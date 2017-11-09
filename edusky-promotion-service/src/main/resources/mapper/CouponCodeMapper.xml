@@ -391,7 +391,7 @@
   </update>
   <select id="selectConditionByOpenId" parameterType="java.util.Map" resultMap="JoinCouponUserAndRestrictResultMap">
       SELECT tcc.id,tcc.coupon_id,tcc.used_flag,tcc.expiration_time,tcc.code
-              ,tc.`name` AS couponName,tc.application_type AS couponApplicationType
+              ,tc.`name` AS couponName,tc.application_type AS couponApplicationType,tc.face_value AS faceValue
               ,trc.id AS restrict_condition_id,trc.coupon_id AS couponId,trc.type,trc.restrict_value,trc.description
       FROM `t_coupon_code` tcc
       LEFT JOIN t_coupon_user tcu ON tcu.coupon_code_id = tcc.id
