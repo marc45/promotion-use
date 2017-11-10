@@ -11,6 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.EnableAspectJAutoProxy;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
@@ -41,36 +42,52 @@ public class ParamsAspect {
             List<Method> methodList = new ArrayList<Method>(Arrays.asList(methods));
             Method method = methodList.stream().filter(m -> m.getName().equals(methodName)).findFirst().get();
             int count = method.getParameterCount();
+            long startTime = System.currentTimeMillis();
             if (count == 0) {
-                logger.info("\n     ------> 请求接口：" + pjp.getTarget().getClass().getName() + "." + methodName + "()" +
+                logger.info("\n     ------> 请求接口：" + className + "." + methodName + "()" +
                         "\n     ------> 参数为：接口无参数");
             } else {
                 List<String> paramNames =getParamNames(method);//参数名称
-                StringBuilder sb = new StringBuilder();
                 Class<?>[] parameterTypes = method.getParameterTypes();
-                sb.append("(");
-                for (int i = 0; i < parameterTypes.length;i++) {
-                    if ((i+1) == parameterTypes.length) {
-                        sb.append(parameterTypes[i].getSimpleName() + " " + paramNames.get(i));
-                    }else {
-                        sb.append(parameterTypes[i].getSimpleName() + " " + paramNames.get(i) + ",");
-                    }
-                }
-                sb.append(")");
-                String name = pjp.getTarget().getClass().getSimpleName() + "." + methodName + "{0}";
-                String methodNameSb = MessageFormat.format(name, sb.toString());
                 Object[] args = pjp.getArgs();
-                logger.info("\n     ------> 请求接口：" + methodNameSb +
-                            "\n     ------> 参数为：" + JSON.toJSONString(args)
-                );
                 JSONObject jsonObject = new JSONObject();
-                for (int i = 0; i < args.length; i++) {
-                    jsonObject.put(paramNames.get(i),args[i]);
+                String methodNameSb = className + "." + methodName + "()";
+                if (paramNames.size() != parameterTypes.length) {
+                    logger.info("\n     ------> 请求接口：" + className +
+                            "\n     ------> 参数名称为：" + JSON.toJSONString(paramNames) +
+                            "\n     ------> 参数为：" + JSON.toJSONString(args)
+                    );
+                } else {
+                    StringBuilder sb = new StringBuilder();
+                    sb.append("(");
+                    for (int i = 0; i < parameterTypes.length;i++) {
+                        if (parameterTypes.length == paramNames.size()) {
+                            if ((i+1) == parameterTypes.length) {
+                                sb.append(parameterTypes[i].getSimpleName() + " " + paramNames.get(i));
+                            }else {
+                                sb.append(parameterTypes[i].getSimpleName() + " " + paramNames.get(i) + ",");
+                            }
+                        }
+                    }
+                    sb.append(")");
+                    String name = className + "." + methodName + "{0}";
+                    methodNameSb = MessageFormat.format(name, sb.toString());
+                    logger.info("\n     ------> 请求接口：" + methodNameSb +
+                            "\n     ------> 参数为：" + JSON.toJSONString(args)
+                    );
+                    for (int i = 0; i < args.length; i++) {
+                        if (paramNames.size() > 0) {
+                            jsonObject.put(paramNames.get(i),args[i]);
+                        }
+                    }
                 }
                 Object result = pjp.proceed(args);
                 logger.info("\n     ------> 请求接口：" + methodNameSb +
-                        "\n     ------> 参数为：" + jsonObject.toJSONString()
+                        "\n     ------> 参数为：" + (StringUtils.isEmpty(jsonObject) ? JSON.toJSONString(args)
+                                                    : jsonObject.toJSONString())
+                        + "\n     ------> 请求时间为：(ms)" + (System.currentTimeMillis() - startTime)
                         + (result != null ? "\n     ------> 返回值为：" + JSON.toJSONString(result) : "接口无返回值")
+
                 );
                 return result;
             }
