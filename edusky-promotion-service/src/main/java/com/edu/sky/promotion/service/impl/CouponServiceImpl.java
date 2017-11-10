@@ -78,13 +78,12 @@ public class CouponServiceImpl implements CouponService {
         inventory.setCouponId(id);
         inventory.setCreateTime(new Date());
         if (coupon.getInventoryFlag()) {
-            inventory.setTotalAmount(coupon.getAmount());
+            inventory.setTotalAmount(coupon.getAmount(     ));
         }
         if (inventoryMapper.insertSelective(inventory) != 1) {
             throw new RuntimeException(ResultBean.getFailResultString(153008,"优惠码增加库存失败!"));
         }
         if (coupon.getRestrictFlag()) {
-            int res1 = inventoryMapper.insertSelective(inventory);
             List<RestrictCondition> restrictConditions = coupon.getRestrictConditions();
             restrictConditions.forEach(cond -> {
                 cond.setCouponId(id);
@@ -126,7 +125,7 @@ public class CouponServiceImpl implements CouponService {
     }
 
     @Override
-    public Coupon findCouponInfo(Long couponId) {
+    public Coupon findCouponInfo(@ParamAsp("couponId") Long couponId) {
         return couponMapper.selectByIdJoinInventoryAndConditions(couponId);
     }
 
@@ -211,7 +210,7 @@ public class CouponServiceImpl implements CouponService {
     }
 
     @Override
-    public Coupon findCouponByCouponCodeId(Long couponCodeId,String openId){
+    public Coupon findCouponByCouponCodeId(@ParamAsp("couponCodeId") Long couponCodeId,@ParamAsp("openId") String openId){
         return couponMapper.selectByCouponCodeId(couponCodeId,openId);
     }
 
