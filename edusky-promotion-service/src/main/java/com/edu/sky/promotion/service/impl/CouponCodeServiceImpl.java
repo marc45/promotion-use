@@ -45,6 +45,8 @@ public class CouponCodeServiceImpl implements CouponCodeService {
     @Reference(version = "1.0",timeout = 12000)
     private WaresService waresService;
 
+    private final static String PROMOTION_INVENTORY="promotion_inventory_";
+
     @Override
     public PageBean<CouponCode> couponCodePage(@ParamAsp("couponCode") CouponCode couponCode,@ParamAsp("pageSize") Integer pageSize
             ,@ParamAsp("pageNum") Integer pageNum) {
@@ -91,13 +93,32 @@ public class CouponCodeServiceImpl implements CouponCodeService {
             if (inventory.getTotalAmount() - inventory.getBindCount() == 0) {
                 throw new RuntimeException(ResultBean.getFailResultString(153015,"该优惠券没有库存了!"));
             }
+            Boolean hasKey = redisTemplate.hasKey(PROMOTION_INVENTORY + couponId);
+            if (hasKey) {
+
+            } else {
+                CouponCode couponCode = new CouponCode();
+                couponCode.setUsedFlag((byte) 0);
+                couponCode.setExportFlag(false);
+                couponCode.setBindType((byte) 0);
+                couponCode.setCouponId(coupon.getId());
+                CouponCodeExample example = getExam(couponCode, false);
+                List<CouponCode> couponCodes = couponCodeMapper.selectByPage(example, PageBean.getOffset(1, 100)
+                        , 100);
+                if (couponCodes == null || couponCodes.isEmpty()) {
+                    return false;
+                }
+                redisTemplate.opsForList().rightPushAll("currentCouponCodes",couponCodes);
+                redisTemplate.expireAt("currentCouponCodes",DateUtils.getDayEnd(new Date()));
+            }
             CouponCode couponCode = new CouponCode();
             couponCode.setUsedFlag((byte) 0);
             couponCode.setExportFlag(false);
             couponCode.setBindType((byte) 0);
             couponCode.setCouponId(coupon.getId());
             CouponCodeExample example = getExam(couponCode, false);
-            List<CouponCode> couponCodes = couponCodeMapper.selectByPage(example, PageBean.getOffset(1, 1), 1);
+            List<CouponCode> couponCodes = couponCodeMapper.selectByPage(example, PageBean.getOffset(1, 1)
+                    , 1);
             if (couponCodes == null || couponCodes.isEmpty()) {
                 return false;
             }
@@ -106,7 +127,7 @@ public class CouponCodeServiceImpl implements CouponCodeService {
             CouponCodeExample.Criteria criteria = example1.createCriteria();
             criteria.andIdEqualTo(couponCode1.getId());
             criteria.andUpdateTimeEqualTo(couponCode1.getUpdateTime());
-            couponCode1.setBindType((byte) 2);
+            couponCode1.setBindType(bindType == null ? (byte)2 : bindType);
             couponCode1.setBindTime(new Date());
             couponCode1.setUpdateTime(new Date());
             if (coupon.getFixType() == 2) {
@@ -338,7 +359,7 @@ public class CouponCodeServiceImpl implements CouponCodeService {
     }
 
     @Override
-    public List<CouponCode> findByJoinCoupon(Long couponId) {
+    public List<CouponCode> findByJoinCoupon(@ParamAsp("couponId") Long couponId) {
         CouponCode couponCode = new CouponCode();
         couponCode.setExportFlag(false);
         if (!StringUtils.isEmpty(couponId)) {
@@ -481,14 +502,15 @@ public class CouponCodeServiceImpl implements CouponCodeService {
         if (flag) {
             flag = updateInventory(coupon,inventory,useOrbind) == 1;
             //再试2次
-            if (!flag) {
+            /*if (!flag) {
                 for (int i = 0; i < 2; i++) {
                     logger.info("刷新优惠券库存次数：" + i);
                     if (updateInventory(coupon,inventory,useOrbind) == 1) {
+                        flag = true;
                         break;
                     }
                 }
-            }
+            }*/
         }
         return flag;
     }
