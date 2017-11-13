@@ -301,28 +301,65 @@
     FROM t_coupon WHERE del_flag = 0 AND id = #{id}
   </select>
 
-  <select id="selectByPage" parameterType="map" resultMap="BaseResultMap">
-      SELECT <include refid="Base_Column_List"/> FROM `t_coupon`
-      <if test="_parameter != null">
-          <include refid="Update_By_Example_Where_Clause" />
-      </if>
-      <if test="example.orderByClause != null">
-          order by ${example.orderByClause}
-      </if>
-      LIMIT #{limit} OFFSET #{offset}
+  <select id="selectByPage" parameterType="java.util.Map" resultMap="CouponJoinInventoryAndConditionsResultMap">
+    SELECT tc.id,tc.`name`,tc.`type`,tc.face_value,tc.inventory_flag,tc.restrict_flag,tc.fix_type
+          ,tc.start_time,tc.end_time,tc.expire_day,tc.description,tc.common_state
+          ,tc.on_line_flag,tc.repeat_flag,tc.home_show,tc.create_time,tc.update_time
+          ,tinv.id AS tinvid ,tinv.total_amount,tinv.used_count,tinv.bind_count
+    FROM t_coupon tc
+    LEFT JOIN t_inventory tinv ON tinv.coupon_id = tc.id
+    <where>
+        <if test="record.type != null">
+            AND tc.type = #{record.type}
+        </if>
+        <if test="record.inventoryFlag != null or record.inventoryFlag == 0">
+            AND tc.inventory_flag = #{record.inventoryFlag}
+        </if>
+        <if test="record.fixType != null or record.fixType == 0">
+            AND tc.fix_type = #{record.fixType}
+        </if>
+        <if test="record.commonState != null or record.commonState == 0">
+            AND tc.common_state = #{record.commonState}
+        </if>
+        <if test="record.onLineFlag != null or record.onLineFlag == 0">
+            AND tc.on_line_flag = #{record.onLineFlag}
+        </if>
+        <if test="record.repeatFlag != null or record.repeatFlag == 0">
+            AND tc.repeat_flag = #{record.repeatFlag}
+        </if>
+        <if test="record.homeShow != null or record.homeShow == 0">
+            AND tc.home_show = #{record.homeShow}
+        </if>
+    </where>
+    LIMIT #{limit} OFFSET #{offset}
   </select>
-  <select id="selectByPageCount" parameterType="java.util.Map" resultType="java.lang.Integer">
-      SELECT COUNT(id) FROM `t_coupon`
-      WHERE 1=1 AND del_flag = 0
-      <if test="record.type != null">
-          AND `type` = #{record.type}
-      </if>
-      <if test="record.commonState != null or record.commonState = 0">
-          AND common_state = #{record.commonState}
-      </if>
-      <if test="record.onLineFlag != null or record.onLineFlag == 0">
-          AND on_line_flag = #{record.onLineFlag}
-      </if>
+  <select id="selectByPageCount" parameterType="java.util.Map" resultType="java.lang.Long">
+      SELECT COUNT(tc.id)
+      FROM t_coupon tc
+      LEFT JOIN t_inventory tinv ON tinv.coupon_id = tc.id
+      <where>
+          <if test="record.type != null">
+              AND tc.type = #{record.type}
+          </if>
+          <if test="record.inventoryFlag != null or record.inventoryFlag == 0">
+              AND tc.inventory_flag = #{record.inventoryFlag}
+          </if>
+          <if test="record.fixType != null or record.fixType == 0">
+              AND tc.fix_type = #{record.fixType}
+          </if>
+          <if test="record.commonState != null or record.commonState == 0">
+              AND tc.common_state = #{record.commonState}
+          </if>
+          <if test="record.onLineFlag != null or record.onLineFlag == 0">
+              AND tc.on_line_flag = #{record.onLineFlag}
+          </if>
+          <if test="record.repeatFlag != null or record.repeatFlag == 0">
+              AND tc.repeat_flag = #{record.repeatFlag}
+          </if>
+          <if test="record.homeShow != null or record.homeShow == 0">
+              AND tc.home_show = #{record.homeShow}
+          </if>
+      </where>
   </select>
     <select id="selectByIdList" parameterType="java.util.List" resultMap="BaseResultMap">
         SELECT <include refid="Base_Column_List" />

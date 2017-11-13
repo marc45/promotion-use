@@ -193,9 +193,8 @@ public class CouponServiceImpl implements CouponService {
     public PageBean<Coupon> couponPage(@ParamAsp("coupon") Coupon coupon,@ParamAsp("pageSize") Integer pageSize
             ,@ParamAsp("pageNum") Integer pageNum) {
         PageBean<Coupon> pageBean = new PageBean<>(pageNum,pageSize);
-        CouponExample example = getExample(coupon, true);
-        pageBean.setList(couponMapper.selectByPage(example, PageBean.getOffset(pageNum, pageSize),pageSize));
-        pageBean.setTotalCount(couponMapper.countByExample(example));
+        pageBean.setList(couponMapper.selectByPage(coupon, PageBean.getOffset(pageNum, pageSize),pageSize));
+        pageBean.setTotalCount(couponMapper.selectByPageCount(coupon));
         return pageBean;
     }
 
