@@ -9,8 +9,9 @@ public class DaemonProgramTest {
     private static BlockingQueue<String> logQueue = new ArrayBlockingQueue<String>(queueCapacity);
 
     public static void main(String[] args) {
+
         for (int i = 0; i < 2; i++) {
-            Logwriter logwriter = new Logwriter();
+            LogWriter logwriter = new LogWriter();
             logwriter.start();
             LogCleaner logCleaner = new LogCleaner();
             logCleaner.setDaemon(true);
@@ -18,7 +19,7 @@ public class DaemonProgramTest {
         }
     }
 
-    private static class Logwriter extends Thread{
+    private static class LogWriter extends Thread{
         @Override
         public void run() {
             for (int i = 0; i < queueCapacity; i++) {
