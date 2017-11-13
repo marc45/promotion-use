@@ -2,18 +2,22 @@ package com.edu.sky.promotion.service.impl;
 
 import com.alibaba.dubbo.config.annotation.Reference;
 import com.alibaba.dubbo.config.annotation.Service;
+import com.alibaba.fastjson.JSON;
 import com.edu.sky.core.exception.ResultBean;
 import com.edu.sky.promotion.aop.ParamAsp;
+import com.edu.sky.promotion.model.CouponUserAndInventoryModel;
 import com.edu.sky.promotion.model.PageBean;
 import com.edu.sky.promotion.model.WaresQueryModel;
 import com.edu.sky.promotion.po.dao.CouponCodeMapper;
 import com.edu.sky.promotion.po.dao.CouponMapper;
 import com.edu.sky.promotion.po.dao.CouponUserMapper;
 import com.edu.sky.promotion.po.dao.InventoryMapper;
-import com.edu.sky.promotion.po.entity.*;
+import com.edu.sky.promotion.po.entity.Coupon;
+import com.edu.sky.promotion.po.entity.CouponCode;
+import com.edu.sky.promotion.po.entity.Inventory;
+import com.edu.sky.promotion.po.entity.RestrictCondition;
 import com.edu.sky.promotion.po.example.CouponCodeExample;
 import com.edu.sky.promotion.po.example.CouponExample;
-import com.edu.sky.promotion.po.example.InventoryExample;
 import com.edu.sky.promotion.service.CouponCodeService;
 import com.edu.sky.promotion.util.DateUtils;
 import com.edu.sky.promotion.util.RandomCodeUtils;
@@ -22,6 +26,7 @@ import com.edu.sky.wares.api.service.WaresService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -44,8 +49,16 @@ public class CouponCodeServiceImpl implements CouponCodeService {
     private InventoryMapper inventoryMapper;
     @Reference(version = "1.0",timeout = 12000)
     private WaresService waresService;
+    @Autowired
+    private AsyncTask asyncTask;
 
-    private final static String PROMOTION_INVENTORY="promotion_inventory_";
+    @Autowired
+    private RedisTemplate<String, Object> redisTemplate;
+    private final String SIGNINFLAG = "UserPromotionSignInFlag";//redis登录送券标识
+    @Value("${couponUserAndInventoryQueue}")
+    private String couponUserAndInventoryQueue;//更新用户和优惠券关系和库存队列
+    @Value("${currentCouponCodeQueue}")
+    private String currentCouponCodeQueue;//优惠码队列前缀
 
     @Override
     public PageBean<CouponCode> couponCodePage(@ParamAsp("couponCode") CouponCode couponCode,@ParamAsp("pageSize") Integer pageSize
@@ -93,36 +106,10 @@ public class CouponCodeServiceImpl implements CouponCodeService {
             if (inventory.getTotalAmount() - inventory.getBindCount() == 0) {
                 throw new RuntimeException(ResultBean.getFailResultString(153015,"该优惠券没有库存了!"));
             }
-            Boolean hasKey = redisTemplate.hasKey(PROMOTION_INVENTORY + couponId);
-            if (hasKey) {
-
-            } else {
-                CouponCode couponCode = new CouponCode();
-                couponCode.setUsedFlag((byte) 0);
-                couponCode.setExportFlag(false);
-                couponCode.setBindType((byte) 0);
-                couponCode.setCouponId(coupon.getId());
-                CouponCodeExample example = getExam(couponCode, false);
-                List<CouponCode> couponCodes = couponCodeMapper.selectByPage(example, PageBean.getOffset(1, 100)
-                        , 100);
-                if (couponCodes == null || couponCodes.isEmpty()) {
-                    return false;
-                }
-                redisTemplate.opsForList().rightPushAll("currentCouponCodes",couponCodes);
-                redisTemplate.expireAt("currentCouponCodes",DateUtils.getDayEnd(new Date()));
+            couponCode1 = leftpop(couponId);
+            if (couponCode1.getId() == null) {
+                throw new RuntimeException(ResultBean.getFailResultString(153015,"该优惠券没有库存了!"));
             }
-            CouponCode couponCode = new CouponCode();
-            couponCode.setUsedFlag((byte) 0);
-            couponCode.setExportFlag(false);
-            couponCode.setBindType((byte) 0);
-            couponCode.setCouponId(coupon.getId());
-            CouponCodeExample example = getExam(couponCode, false);
-            List<CouponCode> couponCodes = couponCodeMapper.selectByPage(example, PageBean.getOffset(1, 1)
-                    , 1);
-            if (couponCodes == null || couponCodes.isEmpty()) {
-                return false;
-            }
-            couponCode1 = couponCodes.get(0);
             CouponCodeExample example1 = new CouponCodeExample();
             CouponCodeExample.Criteria criteria = example1.createCriteria();
             criteria.andIdEqualTo(couponCode1.getId());
@@ -137,6 +124,33 @@ public class CouponCodeServiceImpl implements CouponCodeService {
         Boolean flag = bindCouponCodeAndRefreshInventory(coupon, couponCode1, openId, inventory);
         logger.info("用户自己领取优惠券耗时(毫秒)：" + (System.currentTimeMillis() - start));
         return flag;
+    }
+
+    /**弹出头部优惠码，无则装填
+     * @param couponId
+     * @return
+     */
+    private CouponCode leftpop(Long couponId){
+        Object obj = redisTemplate.opsForList().leftPop( currentCouponCodeQueue + couponId);
+        if (obj != null) {
+            return (CouponCode) obj;
+        } else {
+            return null;
+        }
+    }
+
+    /**获取可用的优惠码
+     * @param couponId
+     * @return
+     */
+    private List<CouponCode> getUseableCouponCodes(Long couponId){
+        CouponCode couponCode = new CouponCode();
+        couponCode.setUsedFlag((byte) 0);
+        couponCode.setExportFlag(false);
+        couponCode.setBindType((byte) 0);
+        couponCode.setCouponId(couponId);
+        CouponCodeExample example = getExam(couponCode, false);
+        return couponCodeMapper.selectByPage(example, PageBean.getOffset(1, 100), 100);
     }
 
     @Override
@@ -243,9 +257,8 @@ public class CouponCodeServiceImpl implements CouponCodeService {
         couponCodeNew.setUpdateTime(new Date());
         Boolean flag = false;
         flag = couponCodeMapper.updateByExampleSelective(couponCodeNew, example1) == 1;
-        if (flag) {
-            flag = refreshInventoryAndRetry(flag, coupon, inventory, 1);
-        }
+        //异步
+        asyncTask.refreshInventoryAndRetry(flag, coupon.getId(), inventory, 1);
         if (!flag) {
             throw new RuntimeException(ResultBean.getFailResultString(153006,"优惠码无法使用！"));
         }
@@ -297,10 +310,6 @@ public class CouponCodeServiceImpl implements CouponCodeService {
         }
         return map;
     }
-
-    @Autowired
-    private RedisTemplate<String, Object> redisTemplate;
-    private final String SIGNINFLAG = "UserPromotionSignInFlag";//redis登录送券标识
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -408,7 +417,13 @@ public class CouponCodeServiceImpl implements CouponCodeService {
         boolean flag = false;
         flag = insertOrUpdateCouponCode(couponCode,coupon);
         if (flag) {
-            flag = buildCouponUserAndRefreshInventory(flag, couponCode, coupon, openId, inventory);
+            CouponUserAndInventoryModel model = new CouponUserAndInventoryModel();
+            model.setFlag(flag);
+            model.setCouponCodeId(couponCode.getId());
+            model.setCouponId(coupon.getId());
+            model.setOpenId(openId);
+            model.setInventory(inventory);
+            redisTemplate.opsForList().rightPush(couponUserAndInventoryQueue, model);
         }
         return flag;
     }
@@ -462,7 +477,7 @@ public class CouponCodeServiceImpl implements CouponCodeService {
      * @param inventory
      * @return
      */
-    private boolean buildCouponUserAndRefreshInventory(boolean flag,CouponCode couponCode,Coupon coupon,String openId
+    /*public boolean buildCouponUserAndRefreshInventory(boolean flag,CouponCode couponCode,Coupon coupon,String openId
             ,Inventory inventory) {
         long start = System.currentTimeMillis();
         if (flag) {
@@ -477,50 +492,40 @@ public class CouponCodeServiceImpl implements CouponCodeService {
             throw new RuntimeException("绑定失败！");
         }
         return flag;
-    }
+    }*/
 
     /**添加优惠码和用户关系
      * @param couponCodeId
      * @param openId
      * @return
      */
-    private boolean insertCouponUser(Long couponCodeId,String openId){
+   /* private boolean insertCouponUser(Long couponCodeId,String openId){
         CouponUser couponUser = new CouponUser();
         couponUser.setCouponCodeId(couponCodeId);
         couponUser.setUserOpenId(openId);
         couponUser.setCreateTime(new Date());
         couponUser.setUpdateTime(new Date());
         return couponUserMapper.insertSelective(couponUser) == 1;
-    }
+    }*/
 
     /**刷新库存：简单1+2次重试
      * @param flag
      * @param coupon
      * @return
      */
-    private boolean refreshInventoryAndRetry(boolean flag,Coupon coupon,Inventory inventory,int useOrbind){
+    /*private boolean refreshInventoryAndRetry(boolean flag,Coupon coupon,Inventory inventory,int useOrbind){
         if (flag) {
             flag = updateInventory(coupon,inventory,useOrbind) == 1;
-            //再试2次
-            /*if (!flag) {
-                for (int i = 0; i < 2; i++) {
-                    logger.info("刷新优惠券库存次数：" + i);
-                    if (updateInventory(coupon,inventory,useOrbind) == 1) {
-                        flag = true;
-                        break;
-                    }
-                }
-            }*/
         }
         return flag;
-    }
+    }*/
 
     /**更新绑定的数量
      * @param coupon
      * @param bindOruse 0绑定数量加一，1使用数量加一
      * @return 0 没有更新，1更新成功，2 没有库存，3 库存中没有此优惠券
      */
-    private int updateInventory(Coupon coupon,Inventory inventory,int bindOruse) {
+    /*private int updateInventory(Coupon coupon,Inventory inventory,int bindOruse) {
         long start = System.currentTimeMillis();
         int res = 0;
         long version = inventory.getVersion();
@@ -536,7 +541,7 @@ public class CouponCodeServiceImpl implements CouponCodeService {
         res = inventoryMapper.updateByExampleSelective(inventory, inventoryExample);
         logger.info("updateInventory更新库存状态耗时(毫秒)：" + (System.currentTimeMillis() - start));
         return res;
-    }
+    }*/
 
     /**判断条件：一个商品对比所有优惠券的限制条件，
      * @param conditions
