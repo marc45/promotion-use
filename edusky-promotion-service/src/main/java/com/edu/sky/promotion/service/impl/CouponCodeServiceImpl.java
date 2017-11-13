@@ -338,7 +338,7 @@ public class CouponCodeServiceImpl implements CouponCodeService {
     }
 
     @Override
-    public List<CouponCode> findByJoinCoupon(Long couponId) {
+    public List<CouponCode> findByJoinCoupon(@ParamAsp("couponId") Long couponId) {
         CouponCode couponCode = new CouponCode();
         couponCode.setExportFlag(false);
         if (!StringUtils.isEmpty(couponId)) {
