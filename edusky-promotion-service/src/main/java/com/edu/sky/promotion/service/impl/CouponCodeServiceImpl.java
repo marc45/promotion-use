@@ -59,6 +59,8 @@ public class CouponCodeServiceImpl implements CouponCodeService {
     private String couponUserAndInventoryQueue;//更新用户和优惠券关系和库存队列
     @Value("${currentCouponCodeQueue}")
     private String currentCouponCodeQueue;//优惠码队列前缀
+    @Value("${couponFlag}")
+    private String couponFlag;
 
     @Override
     public PageBean<CouponCode> couponCodePage(@ParamAsp("couponCode") CouponCode couponCode,@ParamAsp("pageSize") Integer pageSize
@@ -135,16 +137,16 @@ public class CouponCodeServiceImpl implements CouponCodeService {
         if (obj != null) {
             return (CouponCode) obj;
         } else {
-            Object objFlag = redisTemplate.opsForHash().get("couponFlag_", couponId);
+            Object objFlag = redisTemplate.opsForHash().get(couponFlag, couponId);
             if (obj == null || (Boolean) obj) {
                List<CouponCode> couponCodes = couponCodeMapper.selectByCouponIdAndUseable(couponId);
                 if (couponCodes != null && !couponCodes.isEmpty()) {
                     redisTemplate.opsForList().rightPushAll(currentCouponCodeQueue + couponId, couponCodes.toArray());
                     redisTemplate.expireAt(currentCouponCodeQueue + couponId, DateUtils.getDayEnd(new Date()));
-                    redisTemplate.opsForHash().put("couponFlag_", couponId, false);
+                    redisTemplate.opsForHash().put(couponFlag, couponId, false);
                     return (CouponCode) redisTemplate.opsForList().leftPop(currentCouponCodeQueue + couponId);
                 } else {
-                    redisTemplate.opsForHash().put("couponFlag_", couponId, true);
+                    redisTemplate.opsForHash().put(couponFlag, couponId, true);
                 }
             }
             return null;

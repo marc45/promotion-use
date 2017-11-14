@@ -63,4 +63,5 @@ public interface CouponCodeMapper extends BaseMapper<CouponCode, CouponCodeExamp
      */
     List<CouponCode> selectByJoinCoupon(CouponCode couponCode);
 
+    List<CouponCode> selectByCouponIdAndUseable(Long couponId);
 }

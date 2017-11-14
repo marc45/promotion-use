@@ -70,15 +70,17 @@ public class AsyncTask {
     @Async
     public void refreshInventoryAndRetry(boolean flag,Long couponId,Inventory inventory,int useOrbind){
         if (flag) {
-            long version = inventory.getVersion();
             InventoryExample inventoryExample = new InventoryExample();
             InventoryExample.Criteria criteria1 = inventoryExample.createCriteria();
             criteria1.andCouponIdEqualTo(couponId);
             Inventory inventory1 = new Inventory();
             if (useOrbind == 0) {
-                inventory1.setBindCount(inventory.getBindCount() + 1);
+                redisTemplate.opsForHash().increment("couponBind",couponId,1);
+                Integer counter = (Integer) redisTemplate.opsForHash().get("couponBind", couponId);
+                inventory1.setBindCount(counter.longValue());
             }else{
-                inventory1.setUsedCount(inventory.getUsedCount() + 1);
+                redisTemplate.opsForHash().increment("couponUsed",couponId,1);
+                inventory1.setUsedCount((Long)redisTemplate.opsForHash().get("couponUsed", couponId));
             }
             inventoryMapper.updateByExampleSelective(inventory1, inventoryExample);
         }
