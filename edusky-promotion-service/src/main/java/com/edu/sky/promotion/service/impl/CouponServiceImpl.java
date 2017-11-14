@@ -21,6 +21,8 @@ import com.edu.sky.promotion.util.RandomCodeUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
@@ -41,6 +43,10 @@ public class CouponServiceImpl implements CouponService {
     private InventoryMapper inventoryMapper;
     @Autowired
     private RestrictConditionMapper restrictConditionMapper;
+    @Autowired
+    private RedisTemplate<String, Object> redisTemplate;
+    @Value("${currentCouponCodeQueue}")
+    private String currentCouponCodeQueue;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -113,6 +119,7 @@ public class CouponServiceImpl implements CouponService {
             if (!couponCodes.isEmpty()) {
                 int res2 = couponCodeMapper.insertList(couponCodes);
                 if (res2 == couponCodes.size()) {
+                    redisTemplate.opsForList().rightPush(currentCouponCodeQueue + id,couponCodes.toArray());
                 } else {
                     throw new RuntimeException(ResultBean.getFailResultString(153010
                             ,"批量优惠码增加数据失败！"));
@@ -259,10 +266,10 @@ public class CouponServiceImpl implements CouponService {
      */
     private boolean addtoAmountInventory(Coupon coupon,int bindOrAmount){
         Inventory inventory = inventoryMapper.selectByCouponId(coupon.getId());
-        Long version = inventory.getVersion();
+//        Long version = inventory.getVersion();
         InventoryExample example = new InventoryExample();
         InventoryExample.Criteria criteria = example.createCriteria();
-        criteria.andIdEqualTo(inventory.getId()).andVersionEqualTo(version);
+        criteria.andIdEqualTo(inventory.getId())/*.andVersionEqualTo(version)*/;
         Inventory inventory1 = new Inventory();
         if (bindOrAmount == 1) {
             inventory1.setTotalAmount(inventory.getTotalAmount() + coupon.getAmount());
@@ -270,7 +277,7 @@ public class CouponServiceImpl implements CouponService {
         if (bindOrAmount == 0) {
             inventory1.setBindCount(inventory.getBindCount() + 1);
         }
-        inventory1.setVersion(version + 1);
+//        inventory1.setVersion(version + 1);
         return inventoryMapper.updateByExampleSelective(inventory1, example) == 1;
     }
 
@@ -299,6 +306,8 @@ public class CouponServiceImpl implements CouponService {
             int res2 = couponCodeMapper.insertList(couponCodes);
             if (res2 == couponCodes.size()) {
                 flag = true;
+                redisTemplate.opsForList().rightPushAll(currentCouponCodeQueue + coupon1.getId(),couponCodes.toArray());
+                redisTemplate.expireAt(currentCouponCodeQueue + coupon1.getId(),DateUtils.getDayEnd(new Date()));
             } else {
                 throw new RuntimeException(ResultBean.getFailResultString(153011
                         ,"批量优惠码增加数据失败！"));
@@ -311,14 +320,14 @@ public class CouponServiceImpl implements CouponService {
             coupon.setId(coupon1.getId());
             coupon.setAmount(amount);
             flag = addtoAmountInventory(coupon,1);
-            if (!flag) {
-                for (int i = 0; i < 2; i++) {
-                    flag = addtoAmountInventory(coupon,1);
-                    if (flag) {
-                        break;
-                    }
-                }
-            }
+//            if (!flag) {
+//                for (int i = 0; i < 2; i++) {
+//                    flag = addtoAmountInventory(coupon,1);
+//                    if (flag) {
+//                        break;
+//                    }
+//                }
+//            }
         }
         return flag;
     }

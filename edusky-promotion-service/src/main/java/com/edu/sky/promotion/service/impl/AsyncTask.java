@@ -74,12 +74,13 @@ public class AsyncTask {
             InventoryExample inventoryExample = new InventoryExample();
             InventoryExample.Criteria criteria1 = inventoryExample.createCriteria();
             criteria1.andCouponIdEqualTo(couponId);
+            Inventory inventory1 = new Inventory();
             if (useOrbind == 0) {
-                inventory.setBindCount(inventory.getBindCount() + 1);
+                inventory1.setBindCount(inventory.getBindCount() + 1);
             }else{
-                inventory.setUsedCount(inventory.getUsedCount() + 1);
+                inventory1.setUsedCount(inventory.getUsedCount() + 1);
             }
-            inventoryMapper.updateByExampleSelective(inventory, inventoryExample);
+            inventoryMapper.updateByExampleSelective(inventory1, inventoryExample);
         }
 
     }

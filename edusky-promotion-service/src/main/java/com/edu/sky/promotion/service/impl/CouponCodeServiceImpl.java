@@ -107,7 +107,7 @@ public class CouponCodeServiceImpl implements CouponCodeService {
                 throw new RuntimeException(ResultBean.getFailResultString(153015,"该优惠券没有库存了!"));
             }
             couponCode1 = leftpop(couponId);
-            if (couponCode1.getId() == null) {
+            if (couponCode1 ==null || couponCode1.getId() == null) {
                 throw new RuntimeException(ResultBean.getFailResultString(153015,"该优惠券没有库存了!"));
             }
             CouponCodeExample example1 = new CouponCodeExample();
@@ -126,7 +126,7 @@ public class CouponCodeServiceImpl implements CouponCodeService {
         return flag;
     }
 
-    /**弹出头部优惠码，无则装填
+    /**弹出头部优惠码，无则装填：
      * @param couponId
      * @return
      */
@@ -135,6 +135,18 @@ public class CouponCodeServiceImpl implements CouponCodeService {
         if (obj != null) {
             return (CouponCode) obj;
         } else {
+            Object objFlag = redisTemplate.opsForHash().get("couponFlag_", couponId);
+            if (obj == null || (Boolean) obj) {
+               List<CouponCode> couponCodes = couponCodeMapper.selectByCouponIdAndUseable(couponId);
+                if (couponCodes != null && !couponCodes.isEmpty()) {
+                    redisTemplate.opsForList().rightPushAll(currentCouponCodeQueue + couponId, couponCodes.toArray());
+                    redisTemplate.expireAt(currentCouponCodeQueue + couponId, DateUtils.getDayEnd(new Date()));
+                    redisTemplate.opsForHash().put("couponFlag_", couponId, false);
+                    return (CouponCode) redisTemplate.opsForList().leftPop(currentCouponCodeQueue + couponId);
+                } else {
+                    redisTemplate.opsForHash().put("couponFlag_", couponId, true);
+                }
+            }
             return null;
         }
     }
@@ -375,6 +387,16 @@ public class CouponCodeServiceImpl implements CouponCodeService {
             couponCode.setCouponId(couponId);
         }
         return couponCodeMapper.selectByJoinCoupon(couponCode);
+    }
+
+    @Override
+    public long updateCouponCodeList(@ParamAsp("couponId") Long couponId) {
+        CouponCodeExample example = new CouponCodeExample();
+        CouponCodeExample.Criteria criteria = example.createCriteria();
+        criteria.andCouponIdEqualTo(couponId);
+        CouponCode couponCode = new CouponCode();
+        couponCode.setExportFlag(true);
+        return couponCodeMapper.updateByExampleSelective(couponCode, example);
     }
 
     /*--------------------------------------------------------------------------------------------------------------------*/

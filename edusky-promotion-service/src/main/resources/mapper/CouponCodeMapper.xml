@@ -414,9 +414,7 @@
         SELECT tcc.id,tcc.coupon_id,tcc.used_flag,tcc.expiration_time,tcc.code,tc.face_value AS faceValue
               ,tc.`name` AS couponName,tc.application_type AS couponApplicationType
         FROM t_coupon_code tcc
-        <if test="couponId != null">
         INNER JOIN t_coupon tc ON tc.id = tcc.coupon_id
-        </if>
         WHERE tc.del_flag = 0 AND tc.on_line_flag = 0 AND tc.common_state = 1
         <if test="couponId != null">
             AND tcc.coupon_id = #{couponId}
@@ -424,5 +422,10 @@
         <if test="exportFlag != null or export_flag == 0">
             AND export_flag = #{exportFlag}
         </if>
+    </select>
+    <select id="selectByCouponIdAndUseable" parameterType="java.lang.Long" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/> FROM `t_coupon_code`
+        WHERE coupon_id = #{couponId} AND bind_type = 0
+        AND (ISNULL(expiration_time) OR (!ISNULL(expiration_time) AND expiration_time > NOW()));
     </select>
 </mapper>
