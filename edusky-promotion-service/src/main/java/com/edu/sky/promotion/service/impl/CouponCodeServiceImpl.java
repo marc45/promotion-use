@@ -108,23 +108,10 @@ public class CouponCodeServiceImpl implements CouponCodeService {
             if (inventory.getTotalAmount() - inventory.getBindCount() == 0) {
                 throw new RuntimeException(ResultBean.getFailResultString(153015,"该优惠券没有库存了!"));
             }
-            //根据redis取值的原子性循环取出优惠码并验证，验证失败直接过掉知道取出一个或者全部失败
-            Long size = redisTemplate.opsForList().size(currentCouponCodeQueue + couponId);
-            for (int i = 0; i < size; i++) {
-                couponCode1 = leftpop(couponId);
-                if (couponCode1 == null || couponCode1.getId() == null) {
-                    break;
-                }
-                CouponCode couponCode = verifyCouponCode(couponCode1.getId());
-                if (couponCode != null) {
-                    couponCode1 = couponCode;
-                    break;
-                }
-            }
+            couponCode1 = leftpop(couponId);
             if (couponCode1 == null || couponCode1.getId() == null) {
                 throw new RuntimeException(ResultBean.getFailResultString(153015,"该优惠券没有库存了!"));
             }
-
             couponCode1.setBindType(bindType == null ? (byte)2 : bindType);
         }
         Boolean flag = bindCouponCodeAndRefreshInventory(coupon, couponCode1, openId);
@@ -154,25 +141,39 @@ public class CouponCodeServiceImpl implements CouponCodeService {
      * @param couponId
      * @return
      */
-    private CouponCode leftpop(Long couponId){
-        Object obj = redisTemplate.opsForList().leftPop( currentCouponCodeQueue + couponId);
-        if (obj != null) {
-            return (CouponCode) obj;
+    private CouponCode leftpop(Long couponId) {
+        Boolean aBoolean = redisTemplate.hasKey(currentCouponCodeQueue + couponId);
+        CouponCode couponCode = new CouponCode();
+        if (aBoolean) {
+            //根据redis取值的原子性循环取出优惠码并验证，验证失败直接过掉知道取出一个或者全部失败
+            Long size = redisTemplate.opsForList().size(currentCouponCodeQueue + couponId);
+            for (int i = 0; i < size; i++) {
+                Object obj = redisTemplate.opsForList().leftPop(currentCouponCodeQueue + couponId);
+                if (obj != null) {
+                    couponCode = (CouponCode) obj;
+                }
+                if (couponCode == null || couponCode.getId() == null) {
+                    break;
+                }
+                CouponCode couponCode1 = verifyCouponCode(couponCode.getId());
+                if (couponCode1 != null) {
+                    couponCode = couponCode1;
+                    break;
+                }
+            }
         } else {
             Object objFlag = redisTemplate.opsForHash().get(couponFlag, couponId);
-            if (obj == null || (Boolean) obj) {
-               List<CouponCode> couponCodes = couponCodeMapper.selectByCouponIdAndUseable(couponId);
+            if (objFlag == null) {
+                List<CouponCode> couponCodes = couponCodeMapper.selectByCouponIdAndUseable(couponId);
                 if (couponCodes != null && !couponCodes.isEmpty()) {
                     redisTemplate.opsForList().rightPushAll(currentCouponCodeQueue + couponId, couponCodes.toArray());
                     redisTemplate.expireAt(currentCouponCodeQueue + couponId, DateUtils.getDayEnd(new Date()));
                     redisTemplate.opsForHash().put(couponFlag, couponId, false);
                     return (CouponCode) redisTemplate.opsForList().leftPop(currentCouponCodeQueue + couponId);
-                } else {
-                    redisTemplate.opsForHash().put(couponFlag, couponId, true);
                 }
             }
-            return null;
         }
+        return couponCode;
     }
 
     @Override

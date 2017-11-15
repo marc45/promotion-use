@@ -70,6 +70,7 @@ public class AsyncTask {
     @Async
     public void refreshInventoryAndRetry(boolean flag,Long couponId,int useOrbind){
         if (flag) {
+            usedAndBindFlag(couponId);
             InventoryExample inventoryExample = new InventoryExample();
             InventoryExample.Criteria criteria1 = inventoryExample.createCriteria();
             criteria1.andCouponIdEqualTo(couponId);
@@ -84,6 +85,16 @@ public class AsyncTask {
                 inventory1.setUsedCount(couponUsedCount.longValue());
             }
             inventoryMapper.updateByExampleSelective(inventory1, inventoryExample);
+        }
+
+    }
+    private void usedAndBindFlag(Long couponId){
+        Object bind = redisTemplate.opsForHash().get(couponBind, couponId);
+        Object used = redisTemplate.opsForHash().get(couponUsed, couponId);
+        if (bind == null || used == null) {
+            Inventory inventory = inventoryMapper.selectByCouponId(couponId);
+            redisTemplate.opsForHash().put(couponBind,couponId,inventory.getBindCount());
+            redisTemplate.opsForHash().put(couponUsed,couponId,inventory.getUsedCount());
         }
 
     }
