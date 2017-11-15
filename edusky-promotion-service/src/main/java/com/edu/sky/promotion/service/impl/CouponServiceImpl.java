@@ -47,6 +47,10 @@ public class CouponServiceImpl implements CouponService {
     private RedisTemplate<String, Object> redisTemplate;
     @Value("${currentCouponCodeQueue}")
     private String currentCouponCodeQueue;
+    @Value("${couponUsed}")
+    private String couponUsed;
+    @Value("${couponBind}")
+    private String couponBind;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -84,10 +88,14 @@ public class CouponServiceImpl implements CouponService {
         inventory.setCouponId(id);
         inventory.setCreateTime(new Date());
         if (coupon.getInventoryFlag()) {
-            inventory.setTotalAmount(coupon.getAmount(     ));
+            inventory.setTotalAmount(coupon.getAmount());
         }
-        if (inventoryMapper.insertSelective(inventory) != 1) {
-            throw new RuntimeException(ResultBean.getFailResultString(153008,"优惠码增加库存失败!"));
+        boolean flag = inventoryMapper.insertSelective(inventory) != 1;
+        if (flag) {
+            redisTemplate.opsForHash().put(couponBind, inventory.getCouponId(), 0);
+            redisTemplate.opsForHash().put(couponUsed, inventory.getCouponId(), 0);
+        } else {
+            throw new RuntimeException(ResultBean.getFailResultString(153008, "优惠码增加库存失败!"));
         }
         if (coupon.getRestrictFlag()) {
             List<RestrictCondition> restrictConditions = coupon.getRestrictConditions();
@@ -126,8 +134,7 @@ public class CouponServiceImpl implements CouponService {
                 }
             }
         }
-        long endTimes = System.currentTimeMillis();
-        logger.debug("批量优惠码增加数据耗时(毫秒)：" + (endTimes - startTime));
+        logger.debug("批量优惠码增加数据耗时(毫秒)：" + (System.currentTimeMillis() - startTime));
         return id;
     }
 

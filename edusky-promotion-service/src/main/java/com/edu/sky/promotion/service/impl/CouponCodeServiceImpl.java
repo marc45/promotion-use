@@ -108,24 +108,46 @@ public class CouponCodeServiceImpl implements CouponCodeService {
             if (inventory.getTotalAmount() - inventory.getBindCount() == 0) {
                 throw new RuntimeException(ResultBean.getFailResultString(153015,"该优惠券没有库存了!"));
             }
-            couponCode1 = leftpop(couponId);
-            if (couponCode1 ==null || couponCode1.getId() == null) {
+            //根据redis取值的原子性循环取出优惠码并验证，验证失败直接过掉知道取出一个或者全部失败
+            Long size = redisTemplate.opsForList().size(currentCouponCodeQueue + couponId);
+            for (int i = 0; i < size; i++) {
+                couponCode1 = leftpop(couponId);
+                if (couponCode1 == null || couponCode1.getId() == null) {
+                    break;
+                }
+                CouponCode couponCode = verifyCouponCode(couponCode1.getId());
+                if (couponCode != null) {
+                    couponCode1 = couponCode;
+                    break;
+                }
+            }
+            if (couponCode1 == null || couponCode1.getId() == null) {
                 throw new RuntimeException(ResultBean.getFailResultString(153015,"该优惠券没有库存了!"));
             }
-            CouponCodeExample example1 = new CouponCodeExample();
-            CouponCodeExample.Criteria criteria = example1.createCriteria();
-            criteria.andIdEqualTo(couponCode1.getId());
-            criteria.andUpdateTimeEqualTo(couponCode1.getUpdateTime());
+
             couponCode1.setBindType(bindType == null ? (byte)2 : bindType);
-            couponCode1.setBindTime(new Date());
-            couponCode1.setUpdateTime(new Date());
-            if (coupon.getFixType() == 2) {
-                couponCode1.setExpirationTime(DateUtils.getDayEndString(DateUtils.addDay(new Date(), coupon.getExpireDay())));
-            }
         }
-        Boolean flag = bindCouponCodeAndRefreshInventory(coupon, couponCode1, openId, inventory);
+        Boolean flag = bindCouponCodeAndRefreshInventory(coupon, couponCode1, openId);
+        if (!flag) {
+            throw new RuntimeException(ResultBean.getFailResultString(153011,"优惠券绑定失败！"));
+        }
         logger.info("用户自己领取优惠券耗时(毫秒)：" + (System.currentTimeMillis() - start));
         return flag;
+    }
+
+    /**验证该优惠码是否已被绑定
+     * @param couponCodeId
+     * @return
+     */
+    private CouponCode verifyCouponCode(Long couponCodeId){
+        CouponCodeExample example = new CouponCodeExample();
+        CouponCodeExample.Criteria criteria = example.createCriteria();
+        criteria.andIdEqualTo(couponCodeId).andBindTypeEqualTo((byte)0);
+        List<CouponCode> couponCodes = couponCodeMapper.selectByExample(example);
+        if (couponCodes != null && !couponCodes.isEmpty()) {
+            return couponCodes.get(0);
+        }
+        return null;
     }
 
     /**弹出头部优惠码，无则装填：
@@ -153,20 +175,6 @@ public class CouponCodeServiceImpl implements CouponCodeService {
         }
     }
 
-    /**获取可用的优惠码
-     * @param couponId
-     * @return
-     */
-    private List<CouponCode> getUseableCouponCodes(Long couponId){
-        CouponCode couponCode = new CouponCode();
-        couponCode.setUsedFlag((byte) 0);
-        couponCode.setExportFlag(false);
-        couponCode.setBindType((byte) 0);
-        couponCode.setCouponId(couponId);
-        CouponCodeExample example = getExam(couponCode, false);
-        return couponCodeMapper.selectByPage(example, PageBean.getOffset(1, 100), 100);
-    }
-
     @Override
     @Transactional(rollbackFor = Exception.class)
     public List<CouponCode> bindCouponCode4User(@ParamAsp("couponIds") List<Long> couponIds,@ParamAsp("openId") String openId) {
@@ -183,7 +191,7 @@ public class CouponCodeServiceImpl implements CouponCodeService {
             couponCode.setBindType((byte)1);
             for (Inventory inventory : inventories) {
                 if(coupon.getId().longValue() == inventory.getCouponId().longValue()){
-                    res = bindCouponCodeAndRefreshInventory(coupon, couponCode, openId, inventory);
+                    res = bindCouponCodeAndRefreshInventory(coupon, couponCode, openId);
                 }
             }
             if (res) {
@@ -227,12 +235,11 @@ public class CouponCodeServiceImpl implements CouponCodeService {
                 throw new RuntimeException(ResultBean.getFailResultString(153015,"该优惠券没有库存了！"));
             }
         }
-        Boolean flag = bindCouponCodeAndRefreshInventory(coupon, couponCode, openId, inventory);
+        Boolean flag = bindCouponCodeAndRefreshInventory(coupon, couponCode, openId);
         logger.info("用户输入优惠码绑定优惠券耗时(毫秒)：" + (System.currentTimeMillis() - start));
         return flag;
     }
 
-    @Override
     public PageBean<CouponCode> couponCodePage4User(@ParamAsp("openId") String openId,@ParamAsp("useFlag") Byte useFlag
             ,@ParamAsp("pageNum")Integer pageNum,@ParamAsp("pageSize")Integer pageSize) {
         PageBean<CouponCode> pageBean = new PageBean(pageNum,pageSize);
@@ -258,10 +265,6 @@ public class CouponCodeServiceImpl implements CouponCodeService {
         }
         CouponCode couponCode = couponCodes.get(0);
         Long couponId = couponCode.getCouponId();
-        //优惠券信息
-        Coupon coupon = couponMapper.selectById(couponId);
-        //优惠券库存信息
-        Inventory inventory = inventoryMapper.selectByCouponId(couponId);
         CouponCodeExample example1 = new CouponCodeExample();
         CouponCodeExample.Criteria criteria1 = example1.createCriteria();
         criteria1.andIdEqualTo(couponCode.getId());
@@ -271,11 +274,11 @@ public class CouponCodeServiceImpl implements CouponCodeService {
         couponCodeNew.setUpdateTime(new Date());
         Boolean flag = false;
         flag = couponCodeMapper.updateByExampleSelective(couponCodeNew, example1) == 1;
-        //异步
-        asyncTask.refreshInventoryAndRetry(flag, coupon.getId(), inventory, 1);
         if (!flag) {
             throw new RuntimeException(ResultBean.getFailResultString(153006,"优惠码无法使用！"));
         }
+        //异步
+        asyncTask.refreshInventoryAndRetry(flag, couponId, 1);
         logger.info("userUseCouponCode用户使用优惠券耗时(毫秒)：" + (System.currentTimeMillis() - start));
         return flag;
     }
@@ -427,8 +430,7 @@ public class CouponCodeServiceImpl implements CouponCodeService {
      * @param openId
      * @return
      */
-    private boolean bindCouponCodeAndRefreshInventory(Coupon coupon,CouponCode couponCode,String openId
-            ,Inventory inventory) {
+    private boolean bindCouponCodeAndRefreshInventory(Coupon coupon,CouponCode couponCode,String openId) {
         boolean flag = false;
         flag = insertOrUpdateCouponCode(couponCode,coupon);
         if (flag) {
@@ -437,7 +439,6 @@ public class CouponCodeServiceImpl implements CouponCodeService {
             model.setCouponCodeId(couponCode.getId());
             model.setCouponId(coupon.getId());
             model.setOpenId(openId);
-            model.setInventory(inventory);
             redisTemplate.opsForList().rightPush(couponUserAndInventoryQueue, model);
         }
         return flag;
@@ -460,8 +461,7 @@ public class CouponCodeServiceImpl implements CouponCodeService {
             couponCode.setCouponId(coupon.getId());
             couponCode.setCode(RandomCodeUtils.getCouponCode());
             if (coupon.getFixType() == 2) {
-                Date date = DateUtils.addDay(new Date(), coupon.getExpireDay());
-                couponCode.setExpirationTime(DateUtils.getDayEndString(date));
+                couponCode.setExpirationTime(DateUtils.getDayEndString(DateUtils.addDay(new Date(), coupon.getExpireDay())));
             } else {
                 couponCode.setExpirationTime(coupon.getEndTime());
             }
@@ -470,7 +470,7 @@ public class CouponCodeServiceImpl implements CouponCodeService {
             CouponCodeExample example = new CouponCodeExample();
             CouponCodeExample.Criteria criteria = example.createCriteria();
             CouponCode couponCodeNew = new CouponCode();
-            criteria.andIdEqualTo(couponCode.getId());
+            criteria.andIdEqualTo(couponCode.getId()).andBindTypeEqualTo((byte)0);
             couponCodeNew.setBindType(couponCode.getBindType());
             couponCodeNew.setBindTime(new Date());
             couponCodeNew.setUpdateTime(new Date());
