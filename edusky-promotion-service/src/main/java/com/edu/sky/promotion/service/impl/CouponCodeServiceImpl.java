@@ -395,6 +395,16 @@ public class CouponCodeServiceImpl implements CouponCodeService {
     }
 
 
+    @Override
+    public long updateCouponCodeList(@ParamAsp("couponId") Long couponId) {
+        CouponCodeExample example = new CouponCodeExample();
+        CouponCodeExample.Criteria criteria = example.createCriteria();
+        criteria.andCouponIdEqualTo(couponId);
+        CouponCode couponCode = new CouponCode();
+        couponCode.setExportFlag(true);
+        return couponCodeMapper.updateByExampleSelective(couponCode, example);
+    }
+
     /*--------------------------------------------------------------------------------------------------------------------*/
     private CouponCodeExample getExam(CouponCode couponCode,boolean orderFlag){
         CouponCodeExample example = new CouponCodeExample();

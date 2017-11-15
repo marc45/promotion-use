@@ -83,5 +83,11 @@ public interface CouponCodeService {
      */
     List<CouponCode> findByJoinCoupon(Long couponId);
 
+    /**根据couponId更新优惠码导出状态
+     * @param couponId 优惠券Id
+     * @return
+     */
+    long updateCouponCodeList(Long couponId);
+
 
 }
