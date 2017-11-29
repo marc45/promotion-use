@@ -241,8 +241,9 @@ public class CouponCodeServiceImpl implements CouponCodeService {
         return flag;
     }
 
-    public PageBean<CouponCode> couponCodePage4User(@ParamAsp("openId") String openId,@ParamAsp("useFlag") Byte useFlag
-            ,@ParamAsp("pageNum")Integer pageNum,@ParamAsp("pageSize")Integer pageSize) {
+    @Override
+    public PageBean<CouponCode> couponCodePage4User(@ParamAsp("openId") String openId, @ParamAsp("useFlag") Byte useFlag
+            , @ParamAsp("pageNum")Integer pageNum, @ParamAsp("pageSize")Integer pageSize) {
         PageBean<CouponCode> pageBean = new PageBean(pageNum,pageSize);
         if (StringUtils.isEmpty(useFlag)) {
             useFlag = 0;
