@@ -49,7 +49,9 @@ public class DateUtils extends org.apache.commons.lang3.time.DateUtils {
         Calendar cal = Calendar.getInstance();
 
         // -> for some unknown reason SimpleDateFormat does not properly handle the 'Z' timezone
-        if (created.endsWith( "Z" )) created = created.replace( "Z", "+0000" );
+        if (created.endsWith( "Z" )) {
+            created = created.replace("Z", "+0000");
+        }
 
         try {
             formatter = new SimpleDateFormat( "yyyy-MM-dd'T'HH:mm:ssz" );
@@ -733,13 +735,15 @@ public class DateUtils extends org.apache.commons.lang3.time.DateUtils {
      */
     public static boolean isBetween(Date now, Date start, Date end, int model) {
 
-        if (now == null || start == null || end == null)
+        if (now == null || start == null || end == null) {
             throw new IllegalArgumentException(
                     "The scale must be a positive integer or zero");
+        }
         switch (model) {
             case LEFT_OPEN_RIGHT_OPEN: {
-                if (now.after(start) && now.before(end))
+                if (now.after(start) && now.before(end)) {
                     return true;
+                }
                 break;
             }
             default: {
