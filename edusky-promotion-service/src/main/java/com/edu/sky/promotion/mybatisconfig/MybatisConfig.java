@@ -1,6 +1,5 @@
-package com.edu.sky.promotion.mybatisConfig;
+package com.edu.sky.promotion.mybatisconfig;
 
-import com.alibaba.fastjson.JSON;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.mybatis.spring.SqlSessionFactoryBean;
 import org.mybatis.spring.SqlSessionTemplate;

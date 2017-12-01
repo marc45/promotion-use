@@ -13,8 +13,6 @@ public class PromotionServiceStart {
     public static void main(String[] args) {
         new SpringApplicationBuilder().sources(PromotionServiceStart.class)
                 .web(false).run(args);
-
-//        SpringApplication.run(PromotionServiceStart.class,args);
         logger.info("============= Edusky-Promotion-Service Start ON SpringBoot Success =============");
     }
 }

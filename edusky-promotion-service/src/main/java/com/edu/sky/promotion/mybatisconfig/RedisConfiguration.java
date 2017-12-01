@@ -1,4 +1,4 @@
-package com.edu.sky.promotion.mybatisConfig;
+package com.edu.sky.promotion.mybatisconfig;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.PropertyAccessor;

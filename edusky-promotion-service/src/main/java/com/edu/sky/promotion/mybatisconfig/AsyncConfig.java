@@ -1,4 +1,4 @@
-package com.edu.sky.promotion.mybatisConfig;
+package com.edu.sky.promotion.mybatisconfig;
 
 import org.springframework.aop.interceptor.AsyncUncaughtExceptionHandler;
 import org.springframework.context.annotation.Configuration;

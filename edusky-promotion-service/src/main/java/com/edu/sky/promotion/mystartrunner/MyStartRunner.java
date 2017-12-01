@@ -1,11 +1,7 @@
-package com.edu.sky.promotion.myStartRunner;
+package com.edu.sky.promotion.mystartrunner;
 
-import com.alibaba.fastjson.JSON;
 import com.edu.sky.promotion.model.CouponUserAndInventoryModel;
 import com.edu.sky.promotion.po.dao.InventoryMapper;
-import com.edu.sky.promotion.po.entity.CouponCode;
-import com.edu.sky.promotion.po.entity.Inventory;
-import com.edu.sky.promotion.po.example.InventoryExample;
 import com.edu.sky.promotion.service.impl.AsyncTask;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,9 +9,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
-
-import java.util.Date;
-import java.util.List;
 
 @Component
 @Slf4j
