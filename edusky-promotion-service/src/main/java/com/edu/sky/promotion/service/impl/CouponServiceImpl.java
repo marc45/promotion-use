@@ -80,7 +80,8 @@ public class CouponServiceImpl implements CouponService {
             coupon.setStartTime(null);
             coupon.setEndTime(null);
         }
-        if (couponMapper.insertSelective(coupon) != 1) {
+        boolean b = couponMapper.insertSelective(coupon) == 1;
+        if (!b) {
             throw new RuntimeException(ResultBean.getFailResultString(153007,"优惠码增加失败!"));
         }
         Long id = coupon.getId();
@@ -90,7 +91,7 @@ public class CouponServiceImpl implements CouponService {
         if (coupon.getInventoryFlag()) {
             inventory.setTotalAmount(coupon.getAmount());
         }
-        boolean flag = inventoryMapper.insertSelective(inventory) != 1;
+        boolean flag = inventoryMapper.insertSelective(inventory) == 1;
         if (flag) {
             redisTemplate.opsForHash().put(couponBind, inventory.getCouponId(), 0);
             redisTemplate.opsForHash().put(couponUsed, inventory.getCouponId(), 0);
@@ -127,7 +128,7 @@ public class CouponServiceImpl implements CouponService {
             if (!couponCodes.isEmpty()) {
                 int res2 = couponCodeMapper.insertList(couponCodes);
                 if (res2 == couponCodes.size()) {
-                    redisTemplate.opsForList().rightPush(currentCouponCodeQueue + id,couponCodes.toArray());
+                    redisTemplate.opsForList().rightPushAll(currentCouponCodeQueue + id,couponCodes.toArray());
                 } else {
                     throw new RuntimeException(ResultBean.getFailResultString(153010
                             ,"批量优惠码增加数据失败！"));
