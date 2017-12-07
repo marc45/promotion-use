@@ -31,6 +31,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.time.*;
 import java.util.*;
 
 @Service(version = "1.0",timeout = 30000,retries = 0)
@@ -220,6 +221,12 @@ public class CouponCodeServiceImpl implements CouponCodeService {
         Coupon coupon = couponMapper.selectById(couponId);
         if (coupon == null || coupon.getCommonState() != 1) {
             throw new RuntimeException(ResultBean.getFailResultString(153012,"优惠券不存在或者已下线！"));
+        }
+        if (coupon.getEndTime() != null) {
+            boolean b = coupon.getEndTime().before(new Date());
+            if (b) {
+                throw new RuntimeException(ResultBean.getFailResultString(153016,"优惠券已过期，不可绑定！"));
+            }
         }
         if (!coupon.getRepeatFlag()) {
             long repeat = couponCodeMapper.selectByJoinCount(openId, couponId, null);

@@ -19,6 +19,7 @@ import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**获取接口请求信息
  * @author songwei
@@ -34,67 +35,37 @@ public class ParamsAspect {
 
     @Around(value = "servicePoint()")
     public Object serviceAround(ProceedingJoinPoint pjp) throws Exception {
-        String methodName = pjp.getSignature().getName();
         String className = pjp.getTarget().getClass().getName();
         Class<?> clazz = Class.forName(className);
         Method[] methods = clazz.getMethods();
-        List<Method> methodList = new ArrayList<Method>(Arrays.asList(methods));
-        Method method = methodList.stream().filter(m -> m.getName().equals(methodName)).findFirst().get();
-        int count = method.getParameterCount();
-        long startTime = System.currentTimeMillis();
-        Object result = null;
-        if (count == 0) {
-            logger.info("\n     ------> 请求接口：" + className + "." + methodName + "()" +
-                    "\n     ------> 参数为：接口无参数");
-        } else {
-            List<String> paramNames = getParamNames(method);//参数名称
-            Class<?>[] parameterTypes = method.getParameterTypes();
-            Object[] args = pjp.getArgs();
-            JSONObject jsonObject = new JSONObject();
-            String methodNameSb = className + "." + methodName + "()";
-            if (paramNames.size() != parameterTypes.length) {
-                logger.info("\n     ------> 请求接口：" + className +
-                        "\n     ------> 参数名称为：" + JSON.toJSONString(paramNames) +
-                        "\n     ------> 参数为：" + JSON.toJSONString(args)
-                );
-            } else {
-                StringBuilder sb = new StringBuilder();
-                sb.append("(");
-                for (int i = 0; i < parameterTypes.length; i++) {
-                    if (parameterTypes.length == paramNames.size()) {
-                        if ((i + 1) == parameterTypes.length) {
-                            sb.append(parameterTypes[i].getSimpleName() + " " + paramNames.get(i));
-                        } else {
-                            sb.append(parameterTypes[i].getSimpleName() + " " + paramNames.get(i) + ",");
-                        }
-                    }
-                }
-                sb.append(")");
-                String name = className + "." + methodName + "{0}";
-                methodNameSb = MessageFormat.format(name, sb.toString());
-                logger.info("\n     ------> 请求接口：" + methodNameSb +
-                        "\n     ------> 参数为：" + JSON.toJSONString(args)
-                );
-                for (int i = 0; i < args.length; i++) {
-                    if (paramNames.size() > 0) {
-                        jsonObject.put(paramNames.get(i), args[i]);
-                    }
-                }
+        List<Method> methodList = (new ArrayList<Method>(Arrays.asList(methods)));
+        String methodName = pjp.getSignature().getName();
+        List<Method> methods1 = methodList.stream()
+                .filter(m -> m.getName().equals(methodName)).collect(Collectors.toList());
+        Method method = null;
+        Object[] args = pjp.getArgs();
+        for (Method method1 : methods1) {
+            if (pjp.getArgs().length == method1.getParameterCount()) {
+                method = method1;
             }
-
-            try {
-                result = pjp.proceed(args);
-            } catch (Throwable throwable) {
-                throw new RuntimeException(throwable.getMessage());
-            }
-            logger.info("\n     ------> 请求接口：" + methodNameSb +
-                    "\n     ------> 参数为：" + (StringUtils.isEmpty(jsonObject) ? JSON.toJSONString(args)
-                    : jsonObject.toJSONString())
-                    + "\n     ------> 请求时间为：(ms)" + (System.currentTimeMillis() - startTime)
-                    + (result != null ? "\n     ------> 返回值为：" + JSON.toJSONString(result) : "接口无返回值")
-
-            );
         }
+        List<String> paramNames = getParamNames(method);
+        Class<?>[] parameterTypes = method.getParameterTypes();
+        String name = className + "." + methodName + "{0}";
+        String methodNameSb = getMethodNameSb(method.getParameterTypes(), paramNames, name);
+        logger.info("\n     ------> 请求接口：" + methodNameSb +
+                "\n     ------> 参数为：" + getParamToString(args, paramNames)
+        );
+        Object result = null;
+        try {
+            result = pjp.proceed(args);
+        } catch (Throwable throwable) {
+            throwable.printStackTrace();
+        }
+        logger.info("\n     ------> 请求回应接口：" + methodNameSb +
+                "\n     ------> 回应参数为：" + getParamToString(args,paramNames)
+                + (result != null ? "\n     ------> 返回值为：" + JSON.toJSONString(result) : "")
+        );
         return result;
     }
 
@@ -108,6 +79,39 @@ public class ParamsAspect {
             }
         }
         return paramNames;
+    }
+
+    /**拼接请求参数为String
+     * @param args
+     * @param paramNames
+     * @return
+     */
+    private String getParamToString(Object[] args,List<String> paramNames){
+        JSONObject jsonObject = new JSONObject();
+        for (int i = 0; i < paramNames.size(); i++) {
+            jsonObject.put(paramNames.get(i),args[i]);
+        }
+        return jsonObject.toJSONString();
+    }
+
+    /**拼接请求接口及参数名称
+     * @param parameterTypes
+     * @param paramNames
+     * @param name
+     * @return
+     */
+    private String getMethodNameSb(Class<?>[] parameterTypes,List<String> paramNames,String name){
+        StringBuilder sb = new StringBuilder();
+        sb.append("(");
+        for (int i = 0; i < parameterTypes.length; i++) {
+            if ((i + 1) == parameterTypes.length) {
+                sb.append(parameterTypes[i].getSimpleName() + " " + paramNames.get(i));
+            } else {
+                sb.append(parameterTypes[i].getSimpleName() + " " + paramNames.get(i) + ",");
+            }
+        }
+        sb.append(")");
+        return MessageFormat.format(name, sb.toString());
     }
 
 
