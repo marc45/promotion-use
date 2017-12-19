@@ -64,10 +64,12 @@ public class CouponCodeServiceImpl implements CouponCodeService {
     private String couponFlag;
 
     @Override
-    public PageBean<CouponCode> couponCodePage(@ParamAsp("couponCode") CouponCode couponCode,@ParamAsp("pageSize") Integer pageSize
+    public PageBean<CouponCode> couponCodePage(@ParamAsp("couponCode") CouponCode couponCode
+            ,@ParamAsp("pageSize") Integer pageSize
             ,@ParamAsp("pageNum") Integer pageNum) {
         PageBean<CouponCode> pageBean = new PageBean(pageNum,pageSize);
-        pageBean.setList(couponCodeMapper.selectAndConditionByPage(couponCode, pageSize, PageBean.getOffset(pageNum, pageSize)));
+        pageBean.setList(couponCodeMapper.selectAndConditionByPage(couponCode, pageSize
+                , PageBean.getOffset(pageNum, pageSize)));
         pageBean.setTotalCount(couponCodeMapper.selectAndConditionByPageCount(couponCode));
         return pageBean;
     }
@@ -408,7 +410,10 @@ public class CouponCodeServiceImpl implements CouponCodeService {
     public long updateCouponCodeList(@ParamAsp("couponId") Long couponId) {
         CouponCodeExample example = new CouponCodeExample();
         CouponCodeExample.Criteria criteria = example.createCriteria();
-        criteria.andCouponIdEqualTo(couponId);
+        if (couponId != null) {
+            criteria.andCouponIdEqualTo(couponId);
+        }
+        criteria.andBindTypeEqualTo((byte)0);
         CouponCode couponCode = new CouponCode();
         couponCode.setExportFlag(true);
         return couponCodeMapper.updateByExampleSelective(couponCode, example);

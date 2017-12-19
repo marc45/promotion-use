@@ -104,7 +104,8 @@
   <select id="selectAndConditionByPage" parameterType="java.util.Map" resultMap="JoinCouponUserAndRestrictResultMap">
       SELECT tcc.id, tcc.coupon_id, tcc.code, tcc.used_flag, tcc.export_flag, tcc.bind_type, tcc.bind_time
               ,tcc.used_time, tcc.expiration_time,tcc.create_time, tcc.update_time
-              ,tc.`name` AS couponName,tc.face_value AS faceValue,tcu.user_open_id AS userOpenId
+              ,tc.`name` AS couponName,tc.face_value AS faceValue,tc.on_line_flag AS onLineFlag
+              ,tcu.user_open_id AS userOpenId
               ,trc.id AS restrict_condition_id ,trc.type,trc.restrict_value,trc.description
       FROM t_coupon_code tcc
       LEFT JOIN t_coupon tc ON tc.id = tcc.coupon_id
@@ -126,7 +127,10 @@
       <if test="record.bindType != null or record.bindType == 0">
         AND tcc.bind_type = #{record.bindType,jdbcType=TINYINT}
       </if>
-      ORDER BY tcc.expiration_time DESC
+      <if test="record.onLineFlag != null or record.bindType == 0">
+          AND tc.on_line_flag = #{record.onLineFlag,jdbcType=TINYINT}
+      </if>
+      ORDER BY tc.create_time DESC,tcc.expiration_time DESC
       LIMIT #{limit} OFFSET #{offset}
   </select>
     <select id="selectAndConditionByPageCount" parameterType="java.util.Map" resultType="java.lang.Long">
@@ -151,21 +155,24 @@
         <if test="record.bindType != null or record.bindType == 0">
             AND tcc.bind_type = #{record.bindType,jdbcType=TINYINT}
         </if>
+        <if test="record.onLineFlag != null or record.bindType == 0">
+            AND tc.on_line_flag = #{record.onLineFlag,jdbcType=TINYINT}
+        </if>
     </select>
-  <resultMap id="JoinCouponUserAndRestrictResultMap" type="com.edu.sky.promotion.po.entity.CouponCode" extends="BaseResultMap">
-    <result column="couponName" property="couponName"/>
-      <result column="coupon_id" property="couponId"/>
-    <result column="couponApplicationType" property="couponApplicationType"/>
-      <result column="userOpenId" property="openId"/>
-      <result column="faceValue" property="faceValue"/>
-    <collection property="restrictConditions" ofType="com.edu.sky.promotion.po.entity.RestrictCondition">
-      <result column="restrict_condition_id" property="id"/>
-      <result column="type" property="type"/>
-        <result column="couponId" property="couponId"/>
-      <result column="restrict_value" property="restrictValue"/>
-      <result column="description" property="description"/>
-    </collection>
-  </resultMap>
+    <resultMap id="JoinCouponUserAndRestrictResultMap" type="com.edu.sky.promotion.po.entity.CouponCode" extends="BaseResultMap">
+        <result column="couponName" property="couponName"/>
+        <result column="couponApplicationType" property="couponApplicationType"/>
+        <result column="userOpenId" property="openId"/>
+        <result column="faceValue" property="faceValue"/>
+        <result column="onLineFlag" property="onLineFlag"/>
+        <collection property="restrictConditions" ofType="com.edu.sky.promotion.po.entity.RestrictCondition">
+            <result column="restrict_condition_id" property="id"/>
+            <result column="type" property="type"/>
+            <result column="couponId" property="couponId"/>
+            <result column="restrict_value" property="restrictValue"/>
+            <result column="description" property="description"/>
+        </collection>
+    </resultMap>
   <select id="selectByJoinPage" parameterType="java.util.Map" resultMap="JoinCouponUserAndRestrictResultMap">
       SELECT tcc.id,tcc.coupon_id,tcc.used_flag,tcc.expiration_time,tcc.code,tc.face_value AS faceValue
               ,tc.`name` AS couponName,tc.application_type AS couponApplicationType
@@ -415,7 +422,7 @@
               ,tc.`name` AS couponName,tc.application_type AS couponApplicationType
         FROM t_coupon_code tcc
         INNER JOIN t_coupon tc ON tc.id = tcc.coupon_id
-        WHERE tc.del_flag = 0 AND tc.on_line_flag = 0 AND tc.common_state = 1
+        WHERE tc.del_flag = 0 AND tc.on_line_flag = 0 AND tc.common_state = 1 AND tcc.bind_type = 0
         <if test="couponId != null">
             AND tcc.coupon_id = #{couponId}
         </if>

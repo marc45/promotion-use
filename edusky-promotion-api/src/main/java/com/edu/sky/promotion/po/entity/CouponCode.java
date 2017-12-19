@@ -84,10 +84,21 @@ public class CouponCode implements Serializable {
      */
     private Date updateTime;
     private Double faceValue;
-
-    private String openId;//用户code
-    private Byte couponApplicationType;//使用类型
-    private List<RestrictCondition> restrictConditions;//优惠券使用条件集合
+    /**用户code
+     */
+    private String openId;
+    /**
+     * 使用类型
+     */
+    private Byte couponApplicationType;
+    /**
+     * 优惠券使用条件集合
+     */
+    private List<RestrictCondition> restrictConditions;
+    /**
+     * 0线下，1线上
+     */
+    private  Byte onLineFlag;
 
     public Long getId() {
         return id;
@@ -215,5 +226,13 @@ public class CouponCode implements Serializable {
 
     public void setFaceValue(Double faceValue) {
         this.faceValue = faceValue;
+    }
+
+    public Byte getOnLineFlag() {
+        return onLineFlag;
+    }
+
+    public void setOnLineFlag(Byte onLineFlag) {
+        this.onLineFlag = onLineFlag;
     }
 }
