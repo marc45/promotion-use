@@ -435,4 +435,16 @@
         WHERE coupon_id = #{couponId} AND bind_type = 0
         AND (ISNULL(expiration_time) OR (!ISNULL(expiration_time) AND expiration_time > NOW()));
     </select>
+    <update id="updateExcel" parameterType="java.util.Map">
+        UPDATE t_coupon_code tcc
+        LEFT JOIN t_coupon tc ON tc.id = tcc.coupon_id
+        SET export_flag = 1
+        WHERE tc.`on_line_flag` = 0
+        <if test="couponId != null">
+            AND tcc.coupon_id = #{couponId}
+        </if>
+        <if test="bindType != null">
+            AND tcc.bind_type = #{bindType}
+        </if>
+    </update>
 </mapper>

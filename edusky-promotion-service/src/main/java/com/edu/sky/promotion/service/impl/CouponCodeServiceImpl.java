@@ -408,15 +408,7 @@ public class CouponCodeServiceImpl implements CouponCodeService {
 
     @Override
     public long updateCouponCodeList(@ParamAsp("couponId") Long couponId) {
-        CouponCodeExample example = new CouponCodeExample();
-        CouponCodeExample.Criteria criteria = example.createCriteria();
-        if (couponId != null) {
-            criteria.andCouponIdEqualTo(couponId);
-        }
-        criteria.andBindTypeEqualTo((byte)0);
-        CouponCode couponCode = new CouponCode();
-        couponCode.setExportFlag(true);
-        return couponCodeMapper.updateByExampleSelective(couponCode, example);
+        return couponCodeMapper.updateExcel(couponId, (byte) 0);
     }
 
     /*--------------------------------------------------------------------------------------------------------------------*/

@@ -64,4 +64,11 @@ public interface CouponCodeMapper extends BaseMapper<CouponCode, CouponCodeExamp
     List<CouponCode> selectByJoinCoupon(CouponCode couponCode);
 
     List<CouponCode> selectByCouponIdAndUseable(Long couponId);
+
+    /**excel 导出后更新字段
+     * @param couponId
+     * @param bindType
+     * @return
+     */
+    long updateExcel(@Param("couponId") Long couponId,@Param("bindType") Byte bindType);
 }
