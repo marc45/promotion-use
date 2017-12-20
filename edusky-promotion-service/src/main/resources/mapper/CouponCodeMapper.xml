@@ -127,7 +127,7 @@
       <if test="record.bindType != null or record.bindType == 0">
         AND tcc.bind_type = #{record.bindType,jdbcType=TINYINT}
       </if>
-      <if test="record.onLineFlag != null or record.bindType == 0">
+      <if test="record.onLineFlag != null or record.onLineFlag == 0">
           AND tc.on_line_flag = #{record.onLineFlag,jdbcType=TINYINT}
       </if>
       ORDER BY tc.create_time DESC,tcc.expiration_time DESC
@@ -155,7 +155,7 @@
         <if test="record.bindType != null or record.bindType == 0">
             AND tcc.bind_type = #{record.bindType,jdbcType=TINYINT}
         </if>
-        <if test="record.onLineFlag != null or record.bindType == 0">
+        <if test="record.onLineFlag != null or record.onLineFlag == 0">
             AND tc.on_line_flag = #{record.onLineFlag,jdbcType=TINYINT}
         </if>
     </select>
