@@ -331,7 +331,7 @@ public class CouponCodeServiceImpl implements CouponCodeService {
                 if (flag) {
                     waresCouponCodes.add(couponCode);
                     iterator1.remove();
-                    break;
+//                    break;
                 }
             }
             map.put(wares.getId(),waresCouponCodes);
