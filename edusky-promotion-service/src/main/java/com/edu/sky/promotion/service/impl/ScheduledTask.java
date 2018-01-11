@@ -6,14 +6,21 @@ import com.edu.sky.promotion.po.example.CouponCodeExample;
 import com.edu.sky.promotion.util.DateUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.util.Date;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 
 /**
- *  定时删除（物理删除）过期优惠码
+ * 定时删除（物理删除）过期优惠码
  */
 @Slf4j
 @Component
@@ -22,6 +29,11 @@ public class ScheduledTask {
 
     @Autowired
     private CouponCodeMapper couponCodeMapper;
+    @Autowired
+    private RedisTemplate<String, Object> redisTemplate;
+    @Value("${currentCouponCodeQueue}")
+    private String currentCouponCodeQueue;
+
     //10 * * * * ?:每分钟10秒执行一次
     //0 0 1 * * ?
     @Scheduled(cron = "0 0 1 * * ?")//每天凌晨1点执行
@@ -39,7 +51,11 @@ public class ScheduledTask {
         CouponCodeExample.Criteria criteria = example.createCriteria();
         criteria.andBindTypeEqualTo((byte) 0).andExpirationTimeIsNotNull()
                 .andExpirationTimeLessThanOrEqualTo(dayEnd);
-        couponCodeMapper.deleteByExample(example);
+        List<CouponCode> couponCodes = couponCodeMapper.selectByExample(example);
+        if (Objects.nonNull(couponCodes) && !couponCodes.isEmpty()) {
+            delRedisCouponCode(couponCodes);
+            couponCodeMapper.deleteByExample(example);
+        }
 
         CouponCode couponCode = new CouponCode();
         couponCode.setUsedFlag((byte)2);
@@ -49,6 +65,22 @@ public class ScheduledTask {
         criteria1.andBindTypeNotEqualTo((byte)0).andUsedFlagEqualTo((byte) 0).andExpirationTimeIsNotNull()
                 .andExpirationTimeLessThanOrEqualTo(dayEnd);
         couponCodeMapper.updateByExampleSelective(couponCode,example1);
+    }
+
+    /**
+     * 清除redis缓存中的数据
+     */
+    private void delRedisCouponCode(List<CouponCode> couponCodes){
+
+        if (Objects.nonNull(couponCodes) && !couponCodes.isEmpty()) {
+            Set<Long> couponIds = couponCodes.parallelStream()
+                    .map(c -> c.getCouponId())
+                    .collect(Collectors.toSet());
+            Set<String> ids = couponIds.parallelStream()
+                    .map(id -> currentCouponCodeQueue + id)
+                    .collect(Collectors.toSet());
+            redisTemplate.delete(ids);
+        }
     }
 
 }
