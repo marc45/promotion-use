@@ -236,7 +236,7 @@
       <include refid="Example_Where_Clause" />
     </if>
   </delete>
-  <insert id="insert" parameterType="com.edu.sky.promotion.po.entity.CouponCode">
+  <insert id="insert" parameterType="com.edu.sky.promotion.po.entity.CouponCode" >
     insert into t_coupon_code (id, coupon_id, code, 
       used_flag, export_flag, bind_type, 
       bind_time, used_time, expiration_time, 
@@ -246,7 +246,7 @@
       #{bindTime,jdbcType=TIMESTAMP}, #{usedTime,jdbcType=TIMESTAMP}, #{expirationTime,jdbcType=TIMESTAMP}, 
       #{createTime,jdbcType=TIMESTAMP}, #{updateTime,jdbcType=TIMESTAMP})
   </insert>
-  <insert id="insertList" parameterType="java.util.List" >
+  <insert id="insertList" parameterType="java.util.List" useGeneratedKeys="true" keyProperty="id">
     insert into t_coupon_code (id, coupon_id, code,
       used_flag, export_flag, bind_type,
       bind_time, used_time, expiration_time,
